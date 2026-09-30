@@ -1,6 +1,7 @@
-use std::io::{self, Stdin, Write};
+use std::io;
+use std::io::Write;
 
-fn repl(stdin: &Stdin) {
+fn repl(stdin: &io::Stdin) {
     print!("$ ");
     io::stdout().flush().unwrap();
 
