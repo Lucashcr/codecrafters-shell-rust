@@ -1,9 +1,6 @@
-#[allow(unused_imports)]
-use std::io::{self, Write};
+use std::io::{self, Stdin, Write};
 
-fn main() {
-    let stdin = io::stdin();
-
+fn repl(stdin: &Stdin) {
     print!("$ ");
     io::stdout().flush().unwrap();
 
@@ -19,4 +16,12 @@ fn main() {
     }
 
     io::stdout().flush().unwrap();
+}
+
+fn main() {
+    let stdin = io::stdin();
+
+    loop {
+        repl(&stdin);
+    }
 }
