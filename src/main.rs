@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Write;
 
-fn repl(stdin: &io::Stdin) {
+fn repl(stdin: &io::Stdin) -> bool {
     print!("$ ");
     io::stdout().flush().unwrap();
 
@@ -9,6 +9,9 @@ fn repl(stdin: &io::Stdin) {
     match stdin.read_line(&mut prompt) {
         Ok(_) => {
             prompt = String::from(prompt.trim());
+            if prompt == "exit" {
+                return true;
+            }
             println!("{prompt}: command not found");
         }
         Err(error) => {
@@ -17,12 +20,14 @@ fn repl(stdin: &io::Stdin) {
     }
 
     io::stdout().flush().unwrap();
+    false
 }
 
 fn main() {
     let stdin = io::stdin();
 
-    loop {
-        repl(&stdin);
+    let mut finish_loop = false;
+    while !finish_loop {
+        finish_loop = repl(&stdin);
     }
 }
