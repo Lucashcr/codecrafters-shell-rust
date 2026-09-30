@@ -12,6 +12,17 @@ fn repl(stdin: &io::Stdin) -> bool {
             if prompt == "exit" {
                 return true;
             }
+
+            let args: Vec<&str> = prompt.split_whitespace().collect();
+            if args.is_empty() {
+                return false;
+            }
+
+            if args[0] == "echo" {
+                println!("{}", args[1..].join(" "));
+                return false;
+            }
+
             println!("{prompt}: command not found");
         }
         Err(error) => {
