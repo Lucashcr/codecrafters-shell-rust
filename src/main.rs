@@ -18,7 +18,9 @@ fn repl(stdin: &io::Stdin) -> bool {
                 return false;
             }
 
-            if args[0] == "echo" {
+            let command = args[0];
+
+            if command == "echo" {
                 println!("{}", args[1..].join(" "));
                 return false;
             }
