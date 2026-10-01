@@ -44,15 +44,12 @@ pub fn interpret(command: &Command, out: &mut impl Write) -> io::Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prompt_parser::{make_echo, make_type, make_unknown};
 
     fn run(command: &Command) -> (String, bool) {
         let mut out = Vec::new();
         let should_stop = interpret(command, &mut out).unwrap();
         (String::from_utf8(out).unwrap(), should_stop)
-    }
-
-    fn type_of(name: &str, inner: Command) -> Command {
-        Command::Type(name.into(), Box::new(inner))
     }
 
     #[test]
@@ -62,49 +59,55 @@ mod tests {
 
     #[test]
     fn echo_prints_argument() {
-        assert_eq!(run(&Command::Echo("hi".into())), ("hi\n".into(), false));
+        assert_eq!(run(&make_echo("hi")), (String::from("hi\n"), false));
     }
 
     #[test]
     fn echo_empty_prints_newline() {
-        assert_eq!(run(&Command::Echo(String::new())), ("\n".into(), false));
+        assert_eq!(run(&make_echo("")), (String::from("\n"), false));
     }
 
     #[test]
     fn type_echo_is_builtin() {
-        let cmd = type_of("echo", Command::Echo(String::new()));
-        assert_eq!(run(&cmd), ("echo is a shell builtin\n".into(), false));
+        let cmd = make_type("echo");
+        assert_eq!(run(&cmd), (String::from("echo is a shell builtin\n"), false));
     }
 
     #[test]
     fn type_exit_is_builtin() {
-        let cmd = type_of("exit", Command::Exit);
-        assert_eq!(run(&cmd), ("exit is a shell builtin\n".into(), false));
+        let cmd = make_type("exit");
+        assert_eq!(run(&cmd), (String::from("exit is a shell builtin\n"), false));
     }
 
     #[test]
     fn type_type_is_builtin() {
-        let cmd = type_of("type", type_of("x", Command::Exit));
-        assert_eq!(run(&cmd), ("type is a shell builtin\n".into(), false));
+        let cmd = make_type("type");
+        assert_eq!(run(&cmd), (String::from("type is a shell builtin\n"), false));
+    }
+
+    #[test]
+    fn type_ls_is_executable_file() {
+        let cmd = make_type("ls");
+        assert_eq!(run(&cmd), (String::from("ls is /usr/bin/ls\n"), false));
     }
 
     #[test]
     fn type_unknown_is_not_found() {
-        let cmd = type_of("foo", Command::Unknown("foo".into()));
-        assert_eq!(run(&cmd), ("foo: not found\n".into(), false));
+        let cmd = make_type("foo");
+        assert_eq!(run(&cmd), (String::from("foo: not found\n"), false));
     }
 
     #[test]
     fn unknown_command_not_found() {
-        let cmd = Command::Unknown("foo".into());
-        assert_eq!(run(&cmd), ("foo: command not found\n".into(), false));
+        let cmd = make_unknown("foo");
+        assert_eq!(run(&cmd), (String::from("foo: command not found\n"), false));
     }
 
     #[test]
     fn is_builtin_classification() {
-        assert!(Command::Echo(String::new()).is_builtin());
+        assert!(make_echo("").is_builtin());
         assert!(Command::Exit.is_builtin());
-        assert!(type_of("x", Command::Exit).is_builtin());
-        assert!(!Command::Unknown("x".into()).is_builtin());
+        assert!(make_type("x").is_builtin());
+        assert!(!make_unknown("x").is_builtin());
     }
 }
