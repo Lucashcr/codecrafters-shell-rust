@@ -4,37 +4,47 @@ use std::io::Write;
 mod prompt_parser;
 mod command_interpreter;
 
-fn repl(stdin: &io::Stdin) -> bool {
+fn repl(stdin: &io::Stdin, stdout: &mut io::Stdout) -> io::Result<bool> {
     let mut should_stop = false;
 
-    print!("$ ");
-    io::stdout().flush().unwrap();
+    write!(stdout, "$ ")?;
+    stdout.flush()?;
 
     let mut prompt = String::new();
     match stdin.read_line(&mut prompt) {
-        Ok(_) => {
+        Ok(n) => {
+            // EOF
+            if n == 0 {
+                writeln!(stdout)?;
+                return Ok(true);
+            }
+
             prompt = String::from(prompt.trim());
             if prompt.is_empty() {
-                return false;
+                writeln!(stdout)?;
+                return Ok(false);
             }
 
             let command = prompt_parser::parse(&prompt);
-            should_stop = command_interpreter::interpret(&command);
+            should_stop = command_interpreter::interpret(&command, stdout).unwrap();
         }
         Err(error) => {
             println!("{error}");
         }
     }
 
-    io::stdout().flush().unwrap();
-    should_stop
+    stdout.flush()?;
+    Ok(should_stop)
 }
 
-fn main() {
+fn main() -> std::result::Result<(), std::io::Error> {
     let stdin = io::stdin();
+    let mut stdout = io::stdout();
 
     let mut finish_loop = false;
     while !finish_loop {
-        finish_loop = repl(&stdin);
+        finish_loop = repl(&stdin, &mut stdout)?;
     }
+
+    Ok(())
 }
