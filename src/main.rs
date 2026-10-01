@@ -1,7 +1,12 @@
 use std::io;
 use std::io::Write;
 
+mod prompt_parser;
+mod command_interpreter;
+
 fn repl(stdin: &io::Stdin) -> bool {
+    let mut should_stop = false;
+
     print!("$ ");
     io::stdout().flush().unwrap();
 
@@ -9,23 +14,12 @@ fn repl(stdin: &io::Stdin) -> bool {
     match stdin.read_line(&mut prompt) {
         Ok(_) => {
             prompt = String::from(prompt.trim());
-            if prompt == "exit" {
-                return true;
-            }
-
-            let args: Vec<&str> = prompt.split_whitespace().collect();
-            if args.is_empty() {
+            if prompt.is_empty() {
                 return false;
             }
 
-            let command = args[0];
-
-            if command == "echo" {
-                println!("{}", args[1..].join(" "));
-                return false;
-            }
-
-            println!("{prompt}: command not found");
+            let command = prompt_parser::parse(&prompt);
+            should_stop = command_interpreter::interpret(&command);
         }
         Err(error) => {
             println!("{error}");
@@ -33,7 +27,7 @@ fn repl(stdin: &io::Stdin) -> bool {
     }
 
     io::stdout().flush().unwrap();
-    false
+    should_stop
 }
 
 fn main() {
