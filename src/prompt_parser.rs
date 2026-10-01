@@ -1,5 +1,13 @@
 use crate::command_interpreter::Command;
 
+fn echo(s: &str) -> Command {
+    Command::Echo(s.into())
+}
+
+fn unknown(s: &str) -> Command {
+    Command::Unknown(s.into())
+}
+
 pub fn parse(prompt: &str) -> Command {
     let mut args = prompt.split_whitespace();
     let Some(command) = args.next() else {
@@ -18,25 +26,17 @@ pub fn parse(prompt: &str) -> Command {
     if command == "type" {
         match (args.next(), args.next()) {
             (Some(arg), None) => return Command::Type(arg.into(), Box::new(parse(arg))),
-            (Some(_), Some(_)) => return Command::Echo("too many arguments".into()),
-            _ => return Command::Echo("type requires an argument".into()),
+            (Some(_), Some(_)) => return echo("too many arguments"),
+            _ => return echo("type requires an argument"),
         }
     }
 
-    Command::Unknown(command.into())
+    unknown(command)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn echo(s: &str) -> Command {
-        Command::Echo(s.into())
-    }
-
-    fn unknown(s: &str) -> Command {
-        Command::Unknown(s.into())
-    }
 
     #[test]
     fn parses_exit() {
@@ -80,10 +80,7 @@ mod tests {
         );
         assert_eq!(
             parse("type type"),
-            Command::Type(
-                "type".into(),
-                Box::new(echo("type requires an argument"))
-            )
+            Command::Type("type".into(), Box::new(echo("type requires an argument")))
         );
     }
 
