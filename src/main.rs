@@ -1,10 +1,12 @@
+use std::collections::HashMap;
 use std::io;
 use std::io::Write;
 
 mod prompt_parser;
 mod command_interpreter;
+mod path_loader;
 
-fn repl(stdin: &io::Stdin, stdout: &mut io::Stdout) -> io::Result<bool> {
+fn repl(stdin: &io::Stdin, stdout: &mut io::Stdout, executables: &HashMap<String, String>) -> io::Result<bool> {
     let mut should_stop = false;
 
     write!(stdout, "$ ")?;
@@ -25,8 +27,8 @@ fn repl(stdin: &io::Stdin, stdout: &mut io::Stdout) -> io::Result<bool> {
                 return Ok(false);
             }
 
-            let command = prompt_parser::parse(&prompt);
-            should_stop = command_interpreter::interpret(&command, stdout).unwrap();
+            let command = prompt_parser::parse(&prompt, executables);
+            should_stop = command_interpreter::interpret(&command, stdout)?;
         }
         Err(error) => {
             println!("{error}");
@@ -40,10 +42,14 @@ fn repl(stdin: &io::Stdin, stdout: &mut io::Stdout) -> io::Result<bool> {
 fn main() -> std::result::Result<(), std::io::Error> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
+    let mut stderr = io::stderr();
+
+    let executables = path_loader::load(&mut stderr);
+    // println!("{executables:?}");
 
     let mut finish_loop = false;
     while !finish_loop {
-        finish_loop = repl(&stdin, &mut stdout)?;
+        finish_loop = repl(&stdin, &mut stdout, &executables)?;
     }
 
     Ok(())

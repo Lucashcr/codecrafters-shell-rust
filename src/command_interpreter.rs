@@ -7,12 +7,7 @@ pub enum Command {
     Exit,
     Nothing,
     Unknown(String),
-}
-
-impl Command {
-    fn is_builtin(&self) -> bool {
-        !matches!(self, Command::Unknown(_))
-    }
+    Executable(String),
 }
 
 pub fn interpret(command: &Command, out: &mut impl Write) -> io::Result<bool> {
@@ -26,12 +21,13 @@ pub fn interpret(command: &Command, out: &mut impl Write) -> io::Result<bool> {
         Command::Echo(arg) => {
             writeln!(out, "{arg}")?;
         }
-        Command::Type(name, command) => {
-            if command.is_builtin() {
-                writeln!(out, "{name} is a shell builtin")?;
-            } else {
-                writeln!(out, "{name}: not found")?;
-            }
+        Command::Type(name, command) => match &**command {
+            Command::Unknown(_) => writeln!(out, "{name}: not found")?,
+            Command::Executable(cmd) => writeln!(out, "{name} is {cmd}")?,
+            _ => writeln!(out, "{name} is a shell builtin")?,
+        },
+        Command::Executable(path) => {
+            writeln!(out, "executing {path}...")?;
         }
         Command::Unknown(cmd) => {
             writeln!(out, "{cmd}: command not found")?;
@@ -44,7 +40,14 @@ pub fn interpret(command: &Command, out: &mut impl Write) -> io::Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prompt_parser::{make_echo, make_type, make_unknown};
+    use crate::prompt_parser::{make_echo, make_executable, make_type, make_unknown};
+    use std::collections::HashMap;
+
+    fn mock_executables() -> HashMap<String, String> {
+        HashMap::from([
+            (String::from("grep"), String::from("/usr/bin/grep")),
+        ])
+    }
 
     fn run(command: &Command) -> (String, bool) {
         let mut out = Vec::new();
@@ -69,45 +72,58 @@ mod tests {
 
     #[test]
     fn type_echo_is_builtin() {
-        let cmd = make_type("echo");
-        assert_eq!(run(&cmd), (String::from("echo is a shell builtin\n"), false));
+        let cmd = make_type("echo", &mock_executables());
+        assert_eq!(
+            run(&cmd),
+            (String::from("echo is a shell builtin\n"), false)
+        );
     }
 
     #[test]
     fn type_exit_is_builtin() {
-        let cmd = make_type("exit");
-        assert_eq!(run(&cmd), (String::from("exit is a shell builtin\n"), false));
+        let cmd = make_type("exit", &mock_executables());
+        assert_eq!(
+            run(&cmd),
+            (String::from("exit is a shell builtin\n"), false)
+        );
     }
 
     #[test]
     fn type_type_is_builtin() {
-        let cmd = make_type("type");
-        assert_eq!(run(&cmd), (String::from("type is a shell builtin\n"), false));
+        let cmd = make_type("type", &mock_executables());
+        assert_eq!(
+            run(&cmd),
+            (String::from("type is a shell builtin\n"), false)
+        );
     }
 
     #[test]
-    fn type_ls_is_executable_file() {
-        let cmd = make_type("ls");
-        assert_eq!(run(&cmd), (String::from("ls is /usr/bin/ls\n"), false));
+    fn type_grep_is_executable_file() {
+        let cmd = make_type("grep", &mock_executables());
+        assert_eq!(run(&cmd), (String::from("grep is /usr/bin/grep\n"), false));
+    }
+
+    #[test]
+    fn type_ls_is_not_executable_file() {
+        let cmd = make_type("ls", &mock_executables());
+        assert_eq!(run(&cmd), (String::from("ls: not found\n"), false));
     }
 
     #[test]
     fn type_unknown_is_not_found() {
-        let cmd = make_type("foo");
+    let cmd = make_type("foo", &mock_executables());
         assert_eq!(run(&cmd), (String::from("foo: not found\n"), false));
+    }
+
+    #[test]
+    fn grep_is_executable_file() {
+        let cmd = make_executable("grep");
+        assert_eq!(run(&cmd), (String::from("executing grep...\n"), false));
     }
 
     #[test]
     fn unknown_command_not_found() {
         let cmd = make_unknown("foo");
         assert_eq!(run(&cmd), (String::from("foo: command not found\n"), false));
-    }
-
-    #[test]
-    fn is_builtin_classification() {
-        assert!(make_echo("").is_builtin());
-        assert!(Command::Exit.is_builtin());
-        assert!(make_type("x").is_builtin());
-        assert!(!make_unknown("x").is_builtin());
     }
 }
