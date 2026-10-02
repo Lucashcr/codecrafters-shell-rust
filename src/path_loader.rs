@@ -64,7 +64,7 @@ pub fn load(err: &mut Stderr) -> HashMap<String, String> {
     let Some(result) = path
         .split(":")
         .map(read_entry)
-        .reduce(|a, b| a.into_iter().chain(b).collect())
+        .reduce(|a, b| b.into_iter().chain(a).collect())
     else {
         writeln!(err, "failed to index commands from path").unwrap();
         return HashMap::new();
