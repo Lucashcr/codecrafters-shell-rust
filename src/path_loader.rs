@@ -20,6 +20,10 @@ fn read_entry(entry: &str) -> HashMap<String, String> {
                 continue;
             };
 
+            if p.ends_with("/X11") {
+                continue;
+            }
+
             if metadata.is_dir() {
                 programs.extend(read_entry(p));
                 continue;
