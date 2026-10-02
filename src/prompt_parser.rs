@@ -34,7 +34,6 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
     }
 
     if let Some(cmd) = executables.get(command) {
-        // return Command::Executable(cmd.clone());
         return make_executable(cmd);
     }
 
