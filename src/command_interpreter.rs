@@ -50,7 +50,6 @@ pub fn interpret(
             }
         },
         Command::Executable(name, _, args) => {
-            println!("{args:?}");
             let status = std::process::Command::new(name).args(args).status();
             match status {
                 Ok(status) => {

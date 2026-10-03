@@ -11,11 +11,7 @@ pub fn make_type(s: &str, executables: &HashMap<String, String>) -> Command {
 }
 
 pub fn make_executable(name: &str, path: &str, args: Vec<String>) -> Command {
-    Command::Executable(
-        name.to_string(),
-        path.to_string(),
-        args,
-    )
+    Command::Executable(name.to_string(), path.to_string(), args)
 }
 
 pub fn make_unknown(s: &str) -> Command {
@@ -44,9 +40,7 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
 
     if command == "type" {
         match (args.next(), args.next()) {
-            (Some(arg), None) => {
-                return make_type(arg, executables);
-            }
+            (Some(arg), None) => return make_type(arg, executables),
             (Some(_), Some(_)) => return make_echo("too many arguments"),
             _ => return make_echo("type requires an argument"),
         }
