@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io::Write;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
@@ -7,34 +7,85 @@ pub enum Command {
     Exit,
     Nothing,
     Unknown(String),
-    Executable(String, Vec<String>),
+    Executable(String, Option<Vec<String>>),
 }
 
-pub fn interpret(command: &Command, out: &mut impl Write) -> io::Result<bool> {
+pub struct InterpreterResult {
+    pub return_code: i32,
+    pub should_finish: bool,
+}
+
+pub fn interpret(
+    command: &Command,
+    stdout: &mut impl Write,
+    stderr: &mut impl Write,
+) -> InterpreterResult {
     match command {
         Command::Nothing => {
-            writeln!(out)?;
+            writeln!(stdout);
+            return InterpreterResult {
+                return_code: 0,
+                should_finish: false,
+            };
         }
         Command::Exit => {
-            return Ok(true);
+            writeln!(stdout);
+            return InterpreterResult {
+                return_code: 0,
+                should_finish: true,
+            };
         }
         Command::Echo(arg) => {
-            writeln!(out, "{arg}")?;
+            writeln!(stdout, "{arg}");
         }
         Command::Type(name, command) => match &**command {
-            Command::Unknown(_) => writeln!(out, "{name}: not found")?,
-            Command::Executable(cmd, _) => writeln!(out, "{name} is {cmd}")?,
-            _ => writeln!(out, "{name} is a shell builtin")?,
+            Command::Unknown(_) => {
+                writeln!(stdout, "{name}: not found");
+            }
+            Command::Executable(cmd, _) => {
+                writeln!(stdout, "{name} is {cmd}");
+            }
+            _ => {
+                writeln!(stdout, "{name} is a shell builtin");
+            }
         },
-        Command::Executable(path, args) => {
-            writeln!(out, "executing {path}...\nwith args: {}", args.join(" "))?;
+        Command::Executable(program, args) => {
+            let mut command = std::process::Command::new(program);
+            if let Some(args) = args {
+                command.args(args);
+            }
+
+            let status = command.status();
+
+            match status {
+                Ok(status) => {
+                    return InterpreterResult {
+                        return_code: status.code().unwrap_or(1),
+                        should_finish: false,
+                    };
+                }
+                Err(error) => {
+                    write!(stderr, "failed to execute {program}: {}", error);
+                    return InterpreterResult {
+                        return_code: 1,
+                        should_finish: false,
+                    };
+                }
+            };
         }
         Command::Unknown(cmd) => {
-            writeln!(out, "{cmd}: command not found")?;
+            writeln!(stdout, "{cmd}: command not found");
+            return InterpreterResult {
+                return_code: 127,
+                should_finish: false,
+            };
         }
     }
 
-    Ok(false)
+    InterpreterResult {
+        return_code: 0,
+        should_finish: false,
+    }
 }
 
 #[cfg(test)]
@@ -44,30 +95,33 @@ mod tests {
     use std::collections::HashMap;
 
     fn mock_executables() -> HashMap<String, String> {
-        HashMap::from([
-            (String::from("grep"), String::from("/usr/bin/grep")),
-        ])
+        HashMap::from([(String::from("grep"), String::from("/usr/bin/grep"))])
     }
 
-    fn run(command: &Command) -> (String, bool) {
-        let mut out = Vec::new();
-        let should_stop = interpret(command, &mut out).unwrap();
-        (String::from_utf8(out).unwrap(), should_stop)
+    fn run(command: &Command) -> (String, i32, bool) {
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        let result = interpret(command, &mut stdout, &mut stderr);
+        (
+            String::from_utf8(stdout).unwrap(),
+            result.return_code,
+            result.should_finish,
+        )
     }
 
     #[test]
     fn exit_stops_without_output() {
-        assert_eq!(run(&Command::Exit), (String::new(), true));
+        assert_eq!(run(&Command::Exit), (String::from("\n"), 0, true));
     }
 
     #[test]
     fn echo_prints_argument() {
-        assert_eq!(run(&make_echo("hi")), (String::from("hi\n"), false));
+        assert_eq!(run(&make_echo("hi")), (String::from("hi\n"), 0, false));
     }
 
     #[test]
     fn echo_empty_prints_newline() {
-        assert_eq!(run(&make_echo("")), (String::from("\n"), false));
+        assert_eq!(run(&make_echo("")), (String::from("\n"), 0, false));
     }
 
     #[test]
@@ -75,7 +129,7 @@ mod tests {
         let cmd = make_type("echo", &mock_executables());
         assert_eq!(
             run(&cmd),
-            (String::from("echo is a shell builtin\n"), false)
+            (String::from("echo is a shell builtin\n"), 0, false)
         );
     }
 
@@ -84,7 +138,7 @@ mod tests {
         let cmd = make_type("exit", &mock_executables());
         assert_eq!(
             run(&cmd),
-            (String::from("exit is a shell builtin\n"), false)
+            (String::from("exit is a shell builtin\n"), 0, false)
         );
     }
 
@@ -93,37 +147,37 @@ mod tests {
         let cmd = make_type("type", &mock_executables());
         assert_eq!(
             run(&cmd),
-            (String::from("type is a shell builtin\n"), false)
+            (String::from("type is a shell builtin\n"), 0, false)
         );
     }
 
     #[test]
     fn type_grep_is_executable_file() {
         let cmd = make_type("grep", &mock_executables());
-        assert_eq!(run(&cmd), (String::from("grep is /usr/bin/grep\n"), false));
+        assert_eq!(
+            run(&cmd),
+            (String::from("grep is /usr/bin/grep\n"), 0, false)
+        );
     }
 
     #[test]
     fn type_ls_is_not_executable_file() {
         let cmd = make_type("ls", &mock_executables());
-        assert_eq!(run(&cmd), (String::from("ls: not found\n"), false));
+        assert_eq!(run(&cmd), (String::from("ls: not found\n"), 0, false));
     }
 
     #[test]
     fn type_unknown_is_not_found() {
-    let cmd = make_type("foo", &mock_executables());
-        assert_eq!(run(&cmd), (String::from("foo: not found\n"), false));
-    }
-
-    #[test]
-    fn grep_is_executable_file() {
-        let cmd = make_executable("/usr/bin/grep", "teste 123");
-        assert_eq!(run(&cmd), (String::from("executing /usr/bin/grep...\nwith args: teste 123\n"), false));
+        let cmd = make_type("foo", &mock_executables());
+        assert_eq!(run(&cmd), (String::from("foo: not found\n"), 0, false));
     }
 
     #[test]
     fn unknown_command_not_found() {
         let cmd = make_unknown("foo");
-        assert_eq!(run(&cmd), (String::from("foo: command not found\n"), false));
+        assert_eq!(
+            run(&cmd),
+            (String::from("foo: command not found\n"), 127, false)
+        );
     }
 }

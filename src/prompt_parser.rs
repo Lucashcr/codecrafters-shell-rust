@@ -11,7 +11,13 @@ pub fn make_type(s: &str, executables: &HashMap<String, String>) -> Command {
 }
 
 pub fn make_executable(s: &str, args: &str) -> Command {
-    Command::Executable(s.to_string(), args.split(" ").map(String::from).collect())
+    if args.is_empty() {
+        return Command::Executable(s.to_string(), None);
+    }
+    Command::Executable(
+        s.to_string(),
+        Some(args.split_whitespace().map(String::from).collect()),
+    )
 }
 
 pub fn make_unknown(s: &str) -> Command {
@@ -34,7 +40,6 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
     }
 
     if let Some(cmd) = executables.get(command) {
-        // return Command::Executable(cmd.to_string(), args.map(String::from).collect());
         let args: Vec<&str> = args.collect();
         return make_executable(cmd, &args.join(" "));
     }

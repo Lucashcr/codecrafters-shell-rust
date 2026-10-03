@@ -57,7 +57,7 @@ fn read_entry(entry: &str) -> HashMap<String, String> {
 
 pub fn load(err: &mut Stderr) -> HashMap<String, String> {
     let Ok(path) = std::env::var("PATH") else {
-        writeln!(err, "couldn't load path").unwrap();
+        let _ = writeln!(err, "couldn't load path");
         return HashMap::new();
     };
 
@@ -66,7 +66,7 @@ pub fn load(err: &mut Stderr) -> HashMap<String, String> {
         .map(read_entry)
         .reduce(|a, b| b.into_iter().chain(a).collect())
     else {
-        writeln!(err, "failed to index commands from path").unwrap();
+        let _ = writeln!(err, "failed to index commands from path");
         return HashMap::new();
     };
 

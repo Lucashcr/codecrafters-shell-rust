@@ -59,55 +59,55 @@ fn assert_clean_run(input: &str, expected_stdout: &str) {
 
 #[test]
 fn exit_ends_shell() {
-    assert_clean_run("exit\n", "$ ");
+    assert_clean_run("exit\n", "$ \n");
 }
 
 #[test]
 fn echo_prints_arguments() {
-    assert_clean_run("echo hello world\nexit\n", "$ hello world\n$ ");
+    assert_clean_run("echo hello world\nexit\n", "$ hello world\n$ \n");
 }
 
 #[test]
 fn unknown_command_is_reported() {
-    assert_clean_run("foo\nexit\n", "$ foo: command not found\n$ ");
+    assert_clean_run("foo\nexit\n", "$ foo: command not found\n$ \n");
 }
 
 #[test]
 fn type_builtins() {
-    assert_clean_run("type echo\nexit\n", "$ echo is a shell builtin\n$ ");
-    assert_clean_run("type exit\nexit\n", "$ exit is a shell builtin\n$ ");
-    assert_clean_run("type type\nexit\n", "$ type is a shell builtin\n$ ");
+    assert_clean_run("type echo\nexit\n", "$ echo is a shell builtin\n$ \n");
+    assert_clean_run("type exit\nexit\n", "$ exit is a shell builtin\n$ \n");
+    assert_clean_run("type type\nexit\n", "$ type is a shell builtin\n$ \n");
 }
 
 #[test]
 fn type_unknown() {
-    assert_clean_run("type foo\nexit\n", "$ foo: not found\n$ ");
+    assert_clean_run("type foo\nexit\n", "$ foo: not found\n$ \n");
 }
 
 #[test]
 fn type_without_argument() {
     assert_clean_run(
         "type\nexit\n",
-        "$ type requires an argument\n$ ",
+        "$ type requires an argument\n$ \n",
     );
 }
 
 #[test]
 fn type_with_too_many_arguments() {
-    assert_clean_run("type a b\nexit\n", "$ too many arguments\n$ ");
+    assert_clean_run("type a b\nexit\n", "$ too many arguments\n$ \n");
 }
 
 #[test]
 fn multiple_commands_run_in_order() {
     assert_clean_run(
         "echo one\nfoo\necho two\nexit\n",
-        "$ one\n$ foo: command not found\n$ two\n$ ",
+        "$ one\n$ foo: command not found\n$ two\n$ \n",
     );
 }
 
 #[test]
 fn blank_lines_only_reprint_prompt() {
-    assert_clean_run("\n   \nexit\n", "$ \n$ \n$ ");
+    assert_clean_run("\n   \nexit\n", "$ \n$ \n$ \n");
 }
 
 #[test]

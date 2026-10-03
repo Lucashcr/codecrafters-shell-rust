@@ -2,12 +2,20 @@ use std::collections::HashMap;
 use std::io;
 use std::io::Write;
 
-mod prompt_parser;
 mod command_interpreter;
 mod path_loader;
+mod prompt_parser;
 
-fn repl(stdin: &io::Stdin, stdout: &mut io::Stdout, executables: &HashMap<String, String>) -> io::Result<bool> {
-    let mut should_stop = false;
+fn repl(
+    stdin: &io::Stdin,
+    stdout: &mut io::Stdout,
+    stderr: &mut io::Stderr,
+    executables: &HashMap<String, String>,
+) -> io::Result<bool> {
+    let mut result = command_interpreter::InterpreterResult {
+        return_code: 0,
+        should_finish: false,
+    };
 
     write!(stdout, "$ ")?;
     stdout.flush()?;
@@ -28,15 +36,17 @@ fn repl(stdin: &io::Stdin, stdout: &mut io::Stdout, executables: &HashMap<String
             }
 
             let command = prompt_parser::parse(&prompt, executables);
-            should_stop = command_interpreter::interpret(&command, stdout)?;
+            result = command_interpreter::interpret(&command, stdout, stderr);
         }
         Err(error) => {
-            println!("{error}");
+            writeln!(stderr, "{error}")?;
+            result.return_code = 1;
+            result.should_finish = false;
         }
     }
 
     stdout.flush()?;
-    Ok(should_stop)
+    Ok(result.should_finish)
 }
 
 fn main() -> std::result::Result<(), std::io::Error> {
@@ -49,7 +59,7 @@ fn main() -> std::result::Result<(), std::io::Error> {
 
     let mut finish_loop = false;
     while !finish_loop {
-        finish_loop = repl(&stdin, &mut stdout, &executables)?;
+        finish_loop = repl(&stdin, &mut stdout, &mut stderr, &executables)?;
     }
 
     Ok(())
