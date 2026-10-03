@@ -10,12 +10,13 @@ pub fn make_type(s: &str, executables: &HashMap<String, String>) -> Command {
     Command::Type(String::from(s), Box::new(parse(s, executables)))
 }
 
-pub fn make_executable(s: &str, args: &str) -> Command {
+pub fn make_executable(name: &str, path: &str, args: &str) -> Command {
     if args.is_empty() {
-        return Command::Executable(s.to_string(), None);
+        return Command::Executable(name.to_string(), path.to_string(), None);
     }
     Command::Executable(
-        s.to_string(),
+        name.to_string(),
+        path.to_string(),
         Some(args.split_whitespace().map(String::from).collect()),
     )
 }
@@ -41,7 +42,7 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
 
     if let Some(cmd) = executables.get(command) {
         let args: Vec<&str> = args.collect();
-        return make_executable(cmd, &args.join(" "));
+        return make_executable(command, cmd, &args.join(" "));
     }
 
     if command == "type" {
@@ -148,7 +149,7 @@ pub mod tests {
     fn grep_is_executable_file() {
         assert_eq!(
             parse("grep", &mock_executables()),
-            make_executable("/usr/bin/grep", ""),
+            make_executable("grep", "/usr/bin/grep", ""),
         );
     }
 
@@ -156,7 +157,7 @@ pub mod tests {
     fn ls_is_not_executable_file() {
         assert_ne!(
             parse("ls", &mock_executables()),
-            make_executable("/usr/bin/ls", ""),
+            make_executable("ls", "/usr/bin/ls", ""),
         );
     }
 

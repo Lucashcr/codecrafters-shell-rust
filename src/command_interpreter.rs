@@ -42,14 +42,14 @@ pub fn interpret(
             Command::Unknown(_) => {
                 writeln!(stdout, "{name}: not found");
             }
-            Command::Executable(name, path, _) => {
-                writeln!(stdout, "{name} is {path}");
+            Command::Executable(cmd, path, _) => {
+                writeln!(stdout, "{cmd} is {}", path);
             }
             _ => {
                 writeln!(stdout, "{name} is a shell builtin");
             }
         },
-        Command::Executable(name, path, args) => {
+        Command::Executable(name, _, args) => {
             let mut command = std::process::Command::new(name);
             if let Some(args) = args {
                 command.args(args);
@@ -65,7 +65,7 @@ pub fn interpret(
                     };
                 }
                 Err(error) => {
-                    write!(stderr, "failed to execute {name}: {}", error);
+                    write!(stderr, "failed to execute {name}: {error}");
                     return InterpreterResult {
                         return_code: 1,
                         should_finish: false,
@@ -91,7 +91,7 @@ pub fn interpret(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prompt_parser::{make_echo, make_executable, make_type, make_unknown};
+    use crate::prompt_parser::{make_echo, make_type, make_unknown};
     use std::collections::HashMap;
 
     fn mock_executables() -> HashMap<String, String> {
