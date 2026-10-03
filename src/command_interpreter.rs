@@ -117,8 +117,8 @@ mod tests {
 
     #[test]
     fn grep_is_executable_file() {
-        let cmd = make_executable("grep");
-        assert_eq!(run(&cmd), (String::from("executing grep...\n"), false));
+        let cmd = make_executable("/usr/bin/grep", "teste 123");
+        assert_eq!(run(&cmd), (String::from("executing /usr/bin/grep...\nwith args: teste 123\n"), false));
     }
 
     #[test]
