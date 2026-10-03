@@ -7,7 +7,7 @@ pub enum Command {
     Exit,
     Nothing,
     Unknown(String),
-    Executable(String, Option<Vec<String>>),
+    Executable(String, String, Option<Vec<String>>),
 }
 
 pub struct InterpreterResult {
@@ -42,15 +42,15 @@ pub fn interpret(
             Command::Unknown(_) => {
                 writeln!(stdout, "{name}: not found");
             }
-            Command::Executable(cmd, _) => {
-                writeln!(stdout, "{name} is {cmd}");
+            Command::Executable(name, path, _) => {
+                writeln!(stdout, "{name} is {path}");
             }
             _ => {
                 writeln!(stdout, "{name} is a shell builtin");
             }
         },
-        Command::Executable(program, args) => {
-            let mut command = std::process::Command::new(program);
+        Command::Executable(name, path, args) => {
+            let mut command = std::process::Command::new(name);
             if let Some(args) = args {
                 command.args(args);
             }
@@ -65,7 +65,7 @@ pub fn interpret(
                     };
                 }
                 Err(error) => {
-                    write!(stderr, "failed to execute {program}: {}", error);
+                    write!(stderr, "failed to execute {name}: {}", error);
                     return InterpreterResult {
                         return_code: 1,
                         should_finish: false,
