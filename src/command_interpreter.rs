@@ -7,7 +7,7 @@ pub enum Command {
     Exit,
     Nothing,
     Unknown(String),
-    Executable(String, String, Option<Vec<String>>),
+    Executable(String, String, Vec<String>),
 }
 
 pub struct InterpreterResult {
@@ -50,13 +50,8 @@ pub fn interpret(
             }
         },
         Command::Executable(name, _, args) => {
-            let mut command = std::process::Command::new(name);
-            if let Some(args) = args {
-                command.args(args);
-            }
-
-            let status = command.status();
-
+            println!("{args:?}");
+            let status = std::process::Command::new(name).args(args).status();
             match status {
                 Ok(status) => {
                     return Ok(InterpreterResult {
