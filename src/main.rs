@@ -36,7 +36,7 @@ fn repl(
             }
 
             let command = prompt_parser::parse(&prompt, executables);
-            result = command_interpreter::interpret(&command, stdout, stderr);
+            result = command_interpreter::interpret(&command, stdout, stderr)?;
         }
         Err(error) => {
             writeln!(stderr, "{error}")?;
