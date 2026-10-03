@@ -22,27 +22,6 @@ pub fn make_unknown(s: &str) -> Command {
     Command::Unknown(String::from(s))
 }
 
-fn parse_executable_args(line: &str) -> Vec<String> {
-    let mut result = vec![];
-
-    let mut buffer = String::new();
-    for ch in line.chars() {
-        if ch == ' ' {
-            result.push(buffer.clone());
-            buffer.clear();
-            continue;
-        }
-
-        buffer.push(ch);
-    }
-
-    if !buffer.is_empty() {
-        result.push(buffer.clone());
-    }
-
-    result
-}
-
 pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
     let mut args = prompt.split_whitespace();
     let Some(command) = args.next() else {
@@ -59,8 +38,8 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
     }
 
     if let Some(cmd) = executables.get(command) {
-        let args: Vec<&str> = args.collect();
-        return make_executable(command, cmd, parse_executable_args(&args.join(" ")));
+        let args: Vec<String> = args.map(String::from).collect();
+        return make_executable(command, cmd, args);
     }
 
     if command == "type" {
