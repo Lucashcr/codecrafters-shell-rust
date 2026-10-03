@@ -7,7 +7,7 @@ pub enum Command {
     Exit,
     Nothing,
     Unknown(String),
-    Executable(String),
+    Executable(String, Vec<String>),
 }
 
 pub fn interpret(command: &Command, out: &mut impl Write) -> io::Result<bool> {
@@ -23,11 +23,11 @@ pub fn interpret(command: &Command, out: &mut impl Write) -> io::Result<bool> {
         }
         Command::Type(name, command) => match &**command {
             Command::Unknown(_) => writeln!(out, "{name}: not found")?,
-            Command::Executable(cmd) => writeln!(out, "{name} is {cmd}")?,
+            Command::Executable(cmd, _) => writeln!(out, "{name} is {cmd}")?,
             _ => writeln!(out, "{name} is a shell builtin")?,
         },
-        Command::Executable(path) => {
-            writeln!(out, "executing {path}...")?;
+        Command::Executable(path, args) => {
+            writeln!(out, "executing {path}...\nwith args: {}", args.join(" "))?;
         }
         Command::Unknown(cmd) => {
             writeln!(out, "{cmd}: command not found")?;

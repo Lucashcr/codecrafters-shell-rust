@@ -10,8 +10,8 @@ pub fn make_type(s: &str, executables: &HashMap<String, String>) -> Command {
     Command::Type(String::from(s), Box::new(parse(s, executables)))
 }
 
-pub fn make_executable(s: &str) -> Command {
-    Command::Executable(s.to_string())
+pub fn make_executable(s: &str, args: &str) -> Command {
+    Command::Executable(s.to_string(), args.split(" ").map(String::from).collect())
 }
 
 pub fn make_unknown(s: &str) -> Command {
@@ -29,12 +29,14 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
     }
 
     if command == "echo" {
-        let x: Vec<&str> = args.collect();
-        return Command::Echo(x.join(" "));
+        let args: Vec<&str> = args.collect();
+        return make_echo(&args.join(" "));
     }
 
     if let Some(cmd) = executables.get(command) {
-        return make_executable(cmd);
+        // return Command::Executable(cmd.to_string(), args.map(String::from).collect());
+        let args: Vec<&str> = args.collect();
+        return make_executable(cmd, &args.join(" "));
     }
 
     if command == "type" {
@@ -51,13 +53,11 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     fn mock_executables() -> HashMap<String, String> {
-        HashMap::from([
-            (String::from("grep"), String::from("/usr/bin/grep")),
-        ])
+        HashMap::from([(String::from("grep"), String::from("/usr/bin/grep"))])
     }
 
     #[test]
@@ -143,7 +143,7 @@ mod tests {
     fn grep_is_executable_file() {
         assert_eq!(
             parse("grep", &mock_executables()),
-            make_executable("/usr/bin/grep"),
+            make_executable("/usr/bin/grep", ""),
         );
     }
 
@@ -151,7 +151,7 @@ mod tests {
     fn ls_is_not_executable_file() {
         assert_ne!(
             parse("ls", &mock_executables()),
-            make_executable("/usr/bin/ls"),
+            make_executable("/usr/bin/ls", ""),
         );
     }
 
