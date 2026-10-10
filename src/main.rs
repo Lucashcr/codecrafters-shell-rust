@@ -60,6 +60,16 @@ fn main() -> io::Result<()> {
 }
 
 #[cfg(test)]
+pub(crate) mod tests_support {
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+
+    pub fn mock_executables() -> HashMap<String, PathBuf> {
+        HashMap::from([(String::from("grep"), PathBuf::from("/usr/bin/grep"))])
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;

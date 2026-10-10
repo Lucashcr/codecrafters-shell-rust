@@ -49,12 +49,9 @@ pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
 #[cfg(test)]
 mod tests {
     use crate::command::CommandType;
+    use crate::tests_support::mock_executables;
 
     use super::*;
-
-    fn mock_executables() -> HashMap<String, PathBuf> {
-        HashMap::from([(String::from("grep"), PathBuf::from("/usr/bin/grep"))])
-    }
 
     #[test]
     fn parses_exit() {
@@ -142,10 +139,7 @@ mod tests {
 
     #[test]
     fn ls_is_not_executable_file() {
-        assert_ne!(
-            parse("ls", &mock_executables()),
-            make_executable("ls", &PathBuf::from("/usr/bin/ls"), vec![]),
-        );
+        assert_eq!(parse("ls", &mock_executables()), make_unknown("ls"),);
     }
 
     #[test]

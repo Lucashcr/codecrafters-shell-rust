@@ -116,11 +116,7 @@ impl Command {
 mod tests {
     use super::*;
     use crate::prompt_parser::{make_echo, make_type, make_unknown};
-    use std::collections::HashMap;
-
-    fn mock_executables() -> HashMap<String, PathBuf> {
-        HashMap::from([(String::from("grep"), PathBuf::from("/usr/bin/grep"))])
-    }
+    use crate::tests_support::mock_executables;
 
     /// Returns `(stdout, stderr, result)` of interpreting `command`.
     fn run(command: &Command) -> (String, String, InterpResult) {
