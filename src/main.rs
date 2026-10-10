@@ -13,7 +13,7 @@ fn repl(
     stderr: &mut io::Stderr,
     executables: &HashMap<String, PathBuf>,
 ) -> io::Result<bool> {
-    let mut result = command::InterpreterResult {
+    let mut result = command::InterpResult {
         return_code: 0,
         should_finish: false,
     };
