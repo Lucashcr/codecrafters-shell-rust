@@ -55,7 +55,7 @@ fn main() -> std::result::Result<(), std::io::Error> {
     let mut stdout = io::stdout();
     let mut stderr = io::stderr();
 
-    let executables = path_loader::load(&mut stderr);
+    let executables = path_loader::load();
     // println!("{executables:?}");
 
     let mut finish_loop = false;

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::{Stderr, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
@@ -7,7 +6,7 @@ fn is_executable(metadata: &std::fs::Metadata) -> bool {
     metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
 }
 
-fn read_entry(entry: &str) -> HashMap<String, PathBuf> {
+fn read_entry(entry: PathBuf) -> HashMap<String, PathBuf> {
     let Ok(dir) = std::fs::read_dir(entry) else {
         return HashMap::new();
     };
@@ -26,28 +25,27 @@ fn read_entry(entry: &str) -> HashMap<String, PathBuf> {
                         programs.insert(String::from(filename), entry.path());
                     }
                 }
-            },
-            Err(_) => continue
+            }
+            Err(_) => continue,
         }
     }
 
     programs
 }
 
-pub fn load(err: &mut Stderr) -> HashMap<String, PathBuf> {
-    let Ok(path) = std::env::var("PATH") else {
-        let _ = writeln!(err, "couldn't load path");
-        return HashMap::new();
-    };
+pub fn load() -> HashMap<String, PathBuf> {
+    match std::env::var_os("PATH") {
+        Some(path_var) => {
+            let mut result = HashMap::new();
 
-    let Some(result) = path
-        .split(":")
-        .map(read_entry)
-        .reduce(|a, b| b.into_iter().chain(a).collect())
-    else {
-        let _ = writeln!(err, "failed to index commands from path");
-        return HashMap::new();
-    };
+            for path in std::env::split_paths(&path_var) {
+                for (filename, filepath) in read_entry(path) {
+                    result.entry(filename).or_insert(filepath);
+                }
+            }
 
-    result
+            result
+        }
+        None => HashMap::new(),
+    }
 }
