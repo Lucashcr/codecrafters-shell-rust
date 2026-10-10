@@ -43,7 +43,7 @@ fn repl(
                 Ok(false)
             }
             _ => Err(error),
-        }
+        },
     }
 }
 

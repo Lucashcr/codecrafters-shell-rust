@@ -138,7 +138,7 @@ mod tests {
     fn exit_stops_without_output() {
         assert_eq!(
             run(&Command::Exit),
-            (String::from(""), String::new(), InterpResult::exit())
+            (String::new(), String::new(), InterpResult::exit())
         );
     }
 
