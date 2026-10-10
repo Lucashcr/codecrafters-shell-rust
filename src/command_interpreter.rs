@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
@@ -7,7 +8,7 @@ pub enum Command {
     Exit,
     Nothing,
     Unknown(String),
-    Executable(String, String, Vec<String>),
+    Executable(String, PathBuf, Vec<String>),
 }
 
 pub struct InterpreterResult {
@@ -43,7 +44,7 @@ pub fn interpret(
                 writeln!(stdout, "{name}: not found")?;
             }
             Command::Executable(cmd, path, _) => {
-                writeln!(stdout, "{cmd} is {}", path)?;
+                writeln!(stdout, "{cmd} is {}", path.to_string_lossy())?;
             }
             _ => {
                 writeln!(stdout, "{name} is a shell builtin")?;
@@ -88,8 +89,8 @@ mod tests {
     use crate::prompt_parser::{make_echo, make_type, make_unknown};
     use std::collections::HashMap;
 
-    fn mock_executables() -> HashMap<String, String> {
-        HashMap::from([(String::from("grep"), String::from("/usr/bin/grep"))])
+    fn mock_executables() -> HashMap<String, PathBuf> {
+        HashMap::from([(String::from("grep"), PathBuf::from("/usr/bin/grep"))])
     }
 
     fn run(command: &Command) -> (String, i32, bool) {

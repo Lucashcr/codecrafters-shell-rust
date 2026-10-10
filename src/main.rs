@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io;
 use std::io::Write;
+use std::path::PathBuf;
 
 mod command_interpreter;
 mod path_loader;
@@ -10,7 +11,7 @@ fn repl(
     stdin: &io::Stdin,
     stdout: &mut io::Stdout,
     stderr: &mut io::Stderr,
-    executables: &HashMap<String, String>,
+    executables: &HashMap<String, PathBuf>,
 ) -> io::Result<bool> {
     let mut result = command_interpreter::InterpreterResult {
         return_code: 0,

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::command_interpreter::Command;
 
@@ -6,19 +6,19 @@ pub fn make_echo(s: &str) -> Command {
     Command::Echo(String::from(s))
 }
 
-pub fn make_type(s: &str, executables: &HashMap<String, String>) -> Command {
+pub fn make_type(s: &str, executables: &HashMap<String, PathBuf>) -> Command {
     Command::Type(String::from(s), Box::new(parse(s, executables)))
 }
 
-pub fn make_executable(name: &str, path: &str, args: Vec<String>) -> Command {
-    Command::Executable(name.to_string(), path.to_string(), args)
+pub fn make_executable(name: &str, path: &PathBuf, args: Vec<String>) -> Command {
+    Command::Executable(name.to_string(), path.to_path_buf(), args)
 }
 
 pub fn make_unknown(s: &str) -> Command {
     Command::Unknown(String::from(s))
 }
 
-pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
+pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
     let mut args = prompt.split_whitespace();
     let Some(command) = args.next() else {
         return Command::Nothing;
@@ -39,6 +39,7 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
             Some(path) => {
                 let args: Vec<String> = args.map(String::from).collect();
                 make_executable(command, path, args)
+                // Command::Executable(String::from(command), path.to_path_buf(), args)
             }
             None => make_unknown(command),
         }
@@ -49,8 +50,8 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
 pub mod tests {
     use super::*;
 
-    fn mock_executables() -> HashMap<String, String> {
-        HashMap::from([(String::from("grep"), String::from("/usr/bin/grep"))])
+    fn mock_executables() -> HashMap<String, PathBuf> {
+        HashMap::from([(String::from("grep"), PathBuf::from("/usr/bin/grep"))])
     }
 
     #[test]
@@ -136,7 +137,7 @@ pub mod tests {
     fn grep_is_executable_file() {
         assert_eq!(
             parse("grep", &mock_executables()),
-            make_executable("grep", "/usr/bin/grep", vec![]),
+            make_executable("grep", &PathBuf::from("/usr/bin/grep"), vec![]),
         );
     }
 
@@ -144,7 +145,7 @@ pub mod tests {
     fn ls_is_not_executable_file() {
         assert_ne!(
             parse("ls", &mock_executables()),
-            make_executable("ls", "/usr/bin/ls", vec![]),
+            make_executable("ls", &PathBuf::from("/usr/bin/ls"), vec![]),
         );
     }
 
