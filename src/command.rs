@@ -17,7 +17,7 @@ impl CommandType {
             return CommandType::Builtin;
         }
         if let Some(path) = executables.get(cmd) {
-            return CommandType::Executable(path.to_path_buf());
+            return CommandType::Executable(path.clone());
         }
         CommandType::NotFound
     }
