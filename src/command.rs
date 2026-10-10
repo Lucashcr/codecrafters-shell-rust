@@ -3,7 +3,7 @@ use std::io::Write;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum CommandType {
     Builtin,
     Executable(PathBuf),
@@ -13,18 +13,18 @@ pub enum CommandType {
 const BUILTINS: &[&str] = &["echo", "exit", "type"];
 
 impl CommandType {
-    pub fn resolve(cmd: &str, executables: &HashMap<String, PathBuf>) -> CommandType {
+    pub fn resolve(cmd: &str, executables: &HashMap<String, PathBuf>) -> Self {
         if BUILTINS.contains(&cmd) {
-            return CommandType::Builtin;
+            return Self::Builtin;
         }
         if let Some(path) = executables.get(cmd) {
-            return CommandType::Executable(path.clone());
+            return Self::Executable(path.clone());
         }
-        CommandType::NotFound
+        Self::NotFound
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     Echo(String),
     Type(String, CommandType),
@@ -42,19 +42,19 @@ pub struct InterpResult {
 }
 
 impl InterpResult {
-    fn ok() -> Self {
+    const fn ok() -> Self {
         Self {
             return_code: 0,
             should_finish: false,
         }
     }
-    fn exit() -> Self {
+    const fn exit() -> Self {
         Self {
             return_code: 0,
             should_finish: true,
         }
     }
-    fn with_code(code: i32) -> Self {
+    const fn with_code(code: i32) -> Self {
         Self {
             return_code: code,
             should_finish: false,
@@ -69,13 +69,13 @@ impl Command {
         stderr: &mut impl Write,
     ) -> std::io::Result<InterpResult> {
         let result = match self {
-            Command::Nothing => InterpResult::ok(),
-            Command::Exit => InterpResult::exit(),
-            Command::Echo(arg) => {
+            Self::Nothing => InterpResult::ok(),
+            Self::Exit => InterpResult::exit(),
+            Self::Echo(arg) => {
                 writeln!(stdout, "{arg}")?;
                 InterpResult::ok()
             }
-            Command::Type(name, command) => match command {
+            Self::Type(name, command) => match command {
                 CommandType::Builtin => {
                     writeln!(stdout, "{name} is a shell builtin")?;
                     InterpResult::ok()
@@ -89,11 +89,11 @@ impl Command {
                     InterpResult::ok()
                 }
             },
-            Command::UsageError(message) => {
+            Self::UsageError(message) => {
                 writeln!(stderr, "{message}")?;
                 InterpResult::with_code(1)
             }
-            Command::Executable(name, path, args) => {
+            Self::Executable(name, path, args) => {
                 let status = std::process::Command::new(path)
                     .arg0(name)
                     .args(args)
@@ -106,7 +106,7 @@ impl Command {
                     }
                 }
             }
-            Command::Unknown(cmd) => {
+            Self::Unknown(cmd) => {
                 writeln!(stderr, "{cmd}: command not found")?;
                 InterpResult::with_code(127)
             }
