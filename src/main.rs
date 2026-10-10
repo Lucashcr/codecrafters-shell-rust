@@ -36,9 +36,13 @@ fn repl(
             let result = command.interp(stdout, stderr)?;
             Ok(result.should_finish)
         }
-        Err(error) => {
-            writeln!(stderr, "{error}")?;
-            Ok(false)
+        Err(error) => match error.kind() {
+            io::ErrorKind::Interrupted => Ok(false),
+            io::ErrorKind::InvalidData => {
+                writeln!(stderr, "{error}")?;
+                Ok(false)
+            }
+            _ => Err(error),
         }
     }
 }
