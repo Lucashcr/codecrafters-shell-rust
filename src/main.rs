@@ -13,11 +13,6 @@ fn repl(
     stderr: &mut io::Stderr,
     executables: &HashMap<String, PathBuf>,
 ) -> io::Result<bool> {
-    let mut result = command::InterpResult {
-        return_code: 0,
-        should_finish: false,
-    };
-
     write!(stdout, "$ ")?;
     stdout.flush()?;
 
@@ -30,37 +25,34 @@ fn repl(
                 return Ok(true);
             }
 
-            prompt = String::from(prompt.trim());
-            if prompt.is_empty() {
+            let line = prompt.trim();
+            if line.is_empty() {
                 writeln!(stdout)?;
                 return Ok(false);
             }
 
-            let command = prompt_parser::parse(&prompt, executables);
-            result = command.interp(stdout, stderr)?;
+            let command = prompt_parser::parse(line, executables);
+            let result = command.interp(stdout, stderr)?;
+            Ok(result.should_finish)
         }
         Err(error) => {
             writeln!(stderr, "{error}")?;
-            result.return_code = 1;
-            result.should_finish = false;
+            return Ok(false);
         }
     }
-
-    stdout.flush()?;
-    Ok(result.should_finish)
 }
 
-fn main() -> std::result::Result<(), std::io::Error> {
+fn main() -> io::Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut stderr = io::stderr();
 
     let executables = path_loader::load();
-    // println!("{executables:?}");
 
-    let mut finish_loop = false;
-    while !finish_loop {
-        finish_loop = repl(&stdin, &mut stdout, &mut stderr, &executables)?;
+    loop {
+        if repl(&stdin, &mut stdout, &mut stderr, &executables)? {
+            break;
+        }
     }
 
     Ok(())
