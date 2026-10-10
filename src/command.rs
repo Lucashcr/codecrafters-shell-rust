@@ -81,7 +81,7 @@ impl Command {
                     InterpResult::ok()
                 }
                 CommandType::Executable(path) => {
-                    writeln!(stdout, "{name} is {}", path.to_string_lossy())?;
+                    writeln!(stdout, "{name} is {}", path.display())?;
                     InterpResult::ok()
                 }
                 CommandType::NotFound => {
