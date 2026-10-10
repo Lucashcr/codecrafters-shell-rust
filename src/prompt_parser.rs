@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::command::Command;
+use crate::command::{Command, CommandType};
 
 pub fn make_echo(s: &str) -> Command {
     Command::Echo(String::from(s))
 }
 
 pub fn make_type(s: &str, executables: &HashMap<String, PathBuf>) -> Command {
-    let command = parse(s, executables);
-    Command::Type(String::from(s), command.resolve_type())
+    Command::Type(String::from(s), CommandType::resolve(s, executables))
 }
 
 pub fn make_executable(name: &str, path: &Path, args: Vec<String>) -> Command {
@@ -41,7 +40,6 @@ pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
             Some(path) => {
                 let args: Vec<String> = args.map(String::from).collect();
                 make_executable(command, path, args)
-                // Command::Executable(String::from(command), path.to_path_buf(), args)
             }
             None => make_unknown(command),
         },

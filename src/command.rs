@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -6,6 +7,20 @@ pub enum CommandType {
     Builtin,
     Executable(PathBuf),
     NotFound,
+}
+
+const BUILTINS: &[&str] = &["echo", "exit", "type"];
+
+impl CommandType {
+    pub fn resolve(cmd: &str, executables: &HashMap<String, PathBuf>) -> CommandType {
+        if BUILTINS.contains(&cmd) {
+            return CommandType::Builtin;
+        }
+        if let Some(path) = executables.get(cmd) {
+            return CommandType::Executable(path.to_path_buf());
+        }
+        CommandType::NotFound
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -94,14 +109,6 @@ impl Command {
         };
 
         Ok(result)
-    }
-
-    pub fn resolve_type(&self) -> CommandType {
-        match self {
-            Command::Exit | Command::Echo(_) | Command::Type(_, _) => CommandType::Builtin,
-            Command::Executable(_, path, _) => CommandType::Executable(path.to_owned()),
-            _ => CommandType::NotFound,
-        }
     }
 }
 
