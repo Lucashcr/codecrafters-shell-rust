@@ -24,29 +24,25 @@ pub fn parse(prompt: &str, executables: &HashMap<String, String>) -> Command {
         return Command::Nothing;
     };
 
-    if command == "exit" {
-        return Command::Exit;
-    }
-
-    if command == "echo" {
-        let args: Vec<&str> = args.collect();
-        return make_echo(&args.join(" "));
-    }
-
-    if let Some(cmd) = executables.get(command) {
-        let args: Vec<String> = args.map(String::from).collect();
-        return make_executable(command, cmd, args);
-    }
-
-    if command == "type" {
-        match (args.next(), args.next()) {
-            (Some(arg), None) => return make_type(arg, executables),
-            (Some(_), Some(_)) => return make_echo("too many arguments"),
-            _ => return make_echo("type requires an argument"),
+    match command {
+        "exit" => Command::Exit,
+        "echo" => {
+            let args: Vec<&str> = args.collect();
+            make_echo(&args.join(" "))
+        }
+        "type" => match (args.next(), args.next()) {
+            (Some(arg), None) => make_type(arg, executables),
+            (Some(_), Some(_)) => make_echo("too many arguments"),
+            _ => make_echo("type requires an argument"),
+        },
+        _ => match executables.get(command) {
+            Some(path) => {
+                let args: Vec<String> = args.map(String::from).collect();
+                make_executable(command, path, args)
+            }
+            None => make_unknown(command),
         }
     }
-
-    make_unknown(command)
 }
 
 #[cfg(test)]
