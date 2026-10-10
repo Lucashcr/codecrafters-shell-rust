@@ -4,7 +4,6 @@ use std::os::unix::fs::PermissionsExt;
 
 fn read_entry(entry: &str) -> HashMap<String, String> {
     let Ok(dir) = std::fs::read_dir(entry) else {
-        println!("failed to read dir: {entry}");
         return HashMap::new();
     };
 
