@@ -86,10 +86,7 @@ fn type_unknown() {
 
 #[test]
 fn type_without_argument() {
-    assert_clean_run(
-        "type\nexit\n",
-        "$ type requires an argument\n$ \n",
-    );
+    assert_clean_run("type\nexit\n", "$ type requires an argument\n$ \n");
 }
 
 #[test]
