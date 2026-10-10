@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn blank_input_does_not_panic() {
         for input in ["", "   ", "\t"] {
-            assert_eq!(parse(input, &mock_executables()), Command::Nothing)
+            assert_eq!(parse(input, &mock_executables()), Command::Nothing);
         }
     }
 }
