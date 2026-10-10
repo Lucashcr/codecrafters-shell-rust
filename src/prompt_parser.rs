@@ -7,7 +7,8 @@ pub fn make_echo(s: &str) -> Command {
 }
 
 pub fn make_type(s: &str, executables: &HashMap<String, PathBuf>) -> Command {
-    Command::Type(String::from(s), Box::new(parse(s, executables)))
+    let command = parse(s, executables);
+    Command::Type(String::from(s), command.resolve_type())
 }
 
 pub fn make_executable(name: &str, path: &PathBuf, args: Vec<String>) -> Command {
@@ -42,12 +43,14 @@ pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
                 // Command::Executable(String::from(command), path.to_path_buf(), args)
             }
             None => make_unknown(command),
-        }
+        },
     }
 }
 
 #[cfg(test)]
 pub mod tests {
+    use crate::command::CommandType;
+
     use super::*;
 
     fn mock_executables() -> HashMap<String, PathBuf> {
@@ -94,18 +97,15 @@ pub mod tests {
     fn parses_type_of_builtins() {
         assert_eq!(
             parse("type echo", &mock_executables()),
-            Command::Type("echo".into(), Box::new(make_echo("")))
+            Command::Type("echo".into(), CommandType::Builtin)
         );
         assert_eq!(
             parse("type exit", &mock_executables()),
-            Command::Type("exit".into(), Box::new(Command::Exit))
+            Command::Type("exit".into(), CommandType::Builtin)
         );
         assert_eq!(
             parse("type type", &mock_executables()),
-            Command::Type(
-                "type".into(),
-                Box::new(make_echo("type requires an argument"))
-            )
+            Command::Type("type".into(), CommandType::Builtin)
         );
     }
 
@@ -113,7 +113,7 @@ pub mod tests {
     fn parses_type_of_unknown() {
         assert_eq!(
             parse("type foo", &mock_executables()),
-            Command::Type("foo".into(), Box::new(make_unknown("foo")))
+            Command::Type("foo".into(), CommandType::NotFound)
         );
     }
 

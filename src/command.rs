@@ -2,9 +2,16 @@ use std::io::Write;
 use std::path::PathBuf;
 
 #[derive(Debug, PartialEq)]
+pub enum CommandType {
+    Builtin,
+    Executable(PathBuf),
+    NotFound,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Command {
     Echo(String),
-    Type(String, Box<Command>),
+    Type(String, CommandType),
     Exit,
     Nothing,
     Unknown(String),
@@ -57,17 +64,17 @@ impl Command {
                 writeln!(stdout, "{arg}")?;
                 InterpResult::ok()
             }
-            Command::Type(name, command) => match &**command {
-                Command::Unknown(_) => {
-                    writeln!(stdout, "{name}: not found")?;
-                    InterpResult::ok()
-                }
-                Command::Executable(cmd, path, _) => {
-                    writeln!(stdout, "{cmd} is {}", path.to_string_lossy())?;
-                    InterpResult::ok()
-                }
-                _ => {
+            Command::Type(name, command) => match command {
+                CommandType::Builtin => {
                     writeln!(stdout, "{name} is a shell builtin")?;
+                    InterpResult::ok()
+                }
+                CommandType::Executable(path) => {
+                    writeln!(stdout, "{name} is {}", path.to_string_lossy())?;
+                    InterpResult::ok()
+                }
+                CommandType::NotFound => {
+                    writeln!(stdout, "{name}: not found")?;
                     InterpResult::ok()
                 }
             },
@@ -87,6 +94,14 @@ impl Command {
         };
 
         Ok(result)
+    }
+
+    pub fn resolve_type(&self) -> CommandType {
+        match self {
+            Command::Exit | Command::Echo(_) | Command::Type(_, _) => CommandType::Builtin,
+            Command::Executable(_, path, _) => CommandType::Executable(path.to_owned()),
+            _ => CommandType::NotFound,
+        }
     }
 }
 
@@ -172,10 +187,7 @@ mod tests {
         let cmd = make_type("grep", &mock_executables());
         assert_eq!(
             run(&cmd),
-            (
-                String::from("grep is /usr/bin/grep\n"),
-                InterpResult::ok()
-            )
+            (String::from("grep is /usr/bin/grep\n"), InterpResult::ok())
         );
     }
 
