@@ -88,7 +88,7 @@ impl Command {
                 }
             }
             Command::Unknown(cmd) => {
-                writeln!(stdout, "{cmd}: command not found")?;
+                writeln!(stderr, "{cmd}: command not found")?;
                 InterpResult::error(127)
             }
         };
@@ -115,18 +115,23 @@ mod tests {
         HashMap::from([(String::from("grep"), PathBuf::from("/usr/bin/grep"))])
     }
 
-    fn run(command: &Command) -> (String, InterpResult) {
+    /// Returns `(stdout, stderr, result)` of interpreting `command`.
+    fn run(command: &Command) -> (String, String, InterpResult) {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
         let result = command.interp(&mut stdout, &mut stderr).unwrap();
-        (String::from_utf8(stdout).unwrap(), result)
+        (
+            String::from_utf8(stdout).unwrap(),
+            String::from_utf8(stderr).unwrap(),
+            result,
+        )
     }
 
     #[test]
     fn exit_stops_without_output() {
         assert_eq!(
             run(&Command::Exit),
-            (String::from("\n"), InterpResult::exit())
+            (String::from("\n"), String::new(), InterpResult::exit())
         );
     }
 
@@ -134,7 +139,7 @@ mod tests {
     fn echo_prints_argument() {
         assert_eq!(
             run(&make_echo("hi")),
-            (String::from("hi\n"), InterpResult::ok())
+            (String::from("hi\n"), String::new(), InterpResult::ok())
         );
     }
 
@@ -142,7 +147,7 @@ mod tests {
     fn echo_empty_prints_newline() {
         assert_eq!(
             run(&make_echo("")),
-            (String::from("\n"), InterpResult::ok())
+            (String::from("\n"), String::new(), InterpResult::ok())
         );
     }
 
@@ -153,6 +158,7 @@ mod tests {
             run(&cmd),
             (
                 String::from("echo is a shell builtin\n"),
+                String::new(),
                 InterpResult::ok()
             )
         );
@@ -165,6 +171,7 @@ mod tests {
             run(&cmd),
             (
                 String::from("exit is a shell builtin\n"),
+                String::new(),
                 InterpResult::ok()
             )
         );
@@ -177,6 +184,7 @@ mod tests {
             run(&cmd),
             (
                 String::from("type is a shell builtin\n"),
+                String::new(),
                 InterpResult::ok()
             )
         );
@@ -187,7 +195,11 @@ mod tests {
         let cmd = make_type("grep", &mock_executables());
         assert_eq!(
             run(&cmd),
-            (String::from("grep is /usr/bin/grep\n"), InterpResult::ok())
+            (
+                String::from("grep is /usr/bin/grep\n"),
+                String::new(),
+                InterpResult::ok()
+            )
         );
     }
 
@@ -196,7 +208,11 @@ mod tests {
         let cmd = make_type("ls", &mock_executables());
         assert_eq!(
             run(&cmd),
-            (String::from("ls: not found\n"), InterpResult::ok())
+            (
+                String::from("ls: not found\n"),
+                String::new(),
+                InterpResult::ok()
+            )
         );
     }
 
@@ -205,7 +221,11 @@ mod tests {
         let cmd = make_type("foo", &mock_executables());
         assert_eq!(
             run(&cmd),
-            (String::from("foo: not found\n"), InterpResult::ok())
+            (
+                String::from("foo: not found\n"),
+                String::new(),
+                InterpResult::ok()
+            )
         );
     }
 
@@ -215,6 +235,7 @@ mod tests {
         assert_eq!(
             run(&cmd),
             (
+                String::new(),
                 String::from("foo: command not found\n"),
                 InterpResult::error(127)
             )
