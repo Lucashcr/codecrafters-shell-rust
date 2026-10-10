@@ -2,42 +2,33 @@ use std::collections::HashMap;
 use std::io::{Stderr, Write};
 use std::os::unix::fs::PermissionsExt;
 
+fn is_executable(metadata: &std::fs::Metadata) -> bool {
+    metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+}
+
 fn read_entry(entry: &str) -> HashMap<String, String> {
     let Ok(dir) = std::fs::read_dir(entry) else {
         return HashMap::new();
     };
 
     let mut programs: HashMap<String, String> = HashMap::new();
+
     for file_result in dir {
-        let Ok(file) = file_result else {
-            continue;
-        };
-
-        if let Ok(metadata) = file.metadata() {
-            let filepath = file.path();
-            let Some(p) = filepath.to_str() else {
-                continue;
-            };
-
-            if metadata.is_file() && metadata.permissions().mode() & 0o111 != 0 {
-                let Ok(name) = file.file_name().into_string() else {
-                    continue;
-                };
-                programs.insert(name, String::from(p));
-                continue;
-            } else if metadata.is_symlink() {
-                if let Ok(target_metadata) = std::fs::metadata(p) {
-                    if target_metadata.is_file() && metadata.permissions().mode() & 0o111 != 0 {
-                        let Ok(name) = file.file_name().into_string() else {
-                            continue;
-                        };
-                        programs.insert(name, String::from(p));
+        match file_result {
+            Ok(entry) => {
+                if let Ok(metadata) = std::fs::metadata(entry.path()) {
+                    let Ok(filename) = entry.file_name().into_string() else {
                         continue;
+                    };
+                    let Ok(filepath) = entry.path().into_string() else {
+                        continue;
+                    };
+                    if is_executable(&metadata) && !programs.contains_key(&filename) {
+                        programs.insert(filename, filepath);
                     }
                 }
-
-                continue;
-            }
+            },
+            Err(_) => continue
         }
     }
 
