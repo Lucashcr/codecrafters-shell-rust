@@ -58,3 +58,82 @@ fn main() -> io::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    /// Runs a single `repl` iteration. Returns `(stdout, stderr, should_finish)`.
+    fn step(input: &str) -> (String, String, bool) {
+        let mut stdin = Cursor::new(input.as_bytes());
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        let finished = repl(&mut stdin, &mut stdout, &mut stderr, &HashMap::new()).unwrap();
+        (
+            String::from_utf8(stdout).unwrap(),
+            String::from_utf8(stderr).unwrap(),
+            finished,
+        )
+    }
+
+    /// Runs `repl` until it asks to finish. Returns `(stdout, stderr)`.
+    fn session(input: &str) -> (String, String) {
+        let mut stdin = Cursor::new(input.as_bytes());
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        while !repl(&mut stdin, &mut stdout, &mut stderr, &HashMap::new()).unwrap() {}
+        (
+            String::from_utf8(stdout).unwrap(),
+            String::from_utf8(stderr).unwrap(),
+        )
+    }
+
+    #[test]
+    fn eof_prints_newline_and_finishes() {
+        assert_eq!(step(""), (String::from("$ \n"), String::new(), true));
+    }
+
+    #[test]
+    fn blank_line_reprints_prompt_and_continues() {
+        assert_eq!(step("   \n"), (String::from("$ \n"), String::new(), false));
+    }
+
+    #[test]
+    fn echo_prints_and_continues() {
+        assert_eq!(
+            step("echo hi\n"),
+            (String::from("$ hi\n"), String::new(), false)
+        );
+    }
+
+    #[test]
+    fn exit_finishes() {
+        assert_eq!(step("exit\n"), (String::from("$ \n"), String::new(), true));
+    }
+
+    #[test]
+    fn unknown_command_reports_on_stderr_and_continues() {
+        assert_eq!(
+            step("foo\n"),
+            (
+                String::from("$ "),
+                String::from("foo: command not found\n"),
+                false
+            )
+        );
+    }
+
+    #[test]
+    fn session_stops_at_exit_and_ignores_the_rest() {
+        let (stdout, stderr) = session("echo one\nexit\necho nope\n");
+        assert_eq!(stdout, "$ one\n$ \n");
+        assert_eq!(stderr, "");
+    }
+
+    #[test]
+    fn session_stops_at_eof() {
+        let (stdout, _) = session("echo one\n");
+        assert_eq!(stdout, "$ one\n$ \n");
+    }
+}
