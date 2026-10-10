@@ -20,12 +20,11 @@ fn read_entry(entry: PathBuf) -> HashMap<String, PathBuf> {
         let Ok(metadata) = std::fs::metadata(entry.path()) else {
             continue;
         };
-        let filename = entry.file_name();
-        let Some(filename) = filename.to_str() else {
+        let Ok(filename) = entry.file_name().into_string() else {
             continue;
         };
-        if is_executable(&metadata) && !programs.contains_key(filename) {
-            programs.insert(String::from(filename), entry.path());
+        if is_executable(&metadata) {
+            programs.insert(filename, entry.path());
         }
     }
 
@@ -33,20 +32,19 @@ fn read_entry(entry: PathBuf) -> HashMap<String, PathBuf> {
 }
 
 pub fn load() -> HashMap<String, PathBuf> {
-    match std::env::var_os("PATH") {
-        Some(path_var) => {
-            let mut result = HashMap::new();
+    let Some(path_var) = std::env::var_os("PATH") else {
+        return HashMap::new();
+    };
 
-            for path in std::env::split_paths(&path_var) {
-                for (filename, filepath) in read_entry(path) {
-                    result.entry(filename).or_insert(filepath);
-                }
-            }
+    let mut result = HashMap::new();
 
-            result
+    for path in std::env::split_paths(&path_var) {
+        for (filename, filepath) in read_entry(path) {
+            result.entry(filename).or_insert(filepath);
         }
-        None => HashMap::new(),
     }
+
+    result
 }
 
 #[cfg(test)]
