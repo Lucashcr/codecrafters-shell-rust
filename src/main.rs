@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io;
+use std::io::BufRead;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -8,9 +9,9 @@ mod path_loader;
 mod prompt_parser;
 
 fn repl(
-    stdin: &io::Stdin,
-    stdout: &mut io::Stdout,
-    stderr: &mut io::Stderr,
+    stdin: &mut impl BufRead,
+    stdout: &mut impl Write,
+    stderr: &mut impl Write,
     executables: &HashMap<String, PathBuf>,
 ) -> io::Result<bool> {
     write!(stdout, "$ ")?;
@@ -43,14 +44,14 @@ fn repl(
 }
 
 fn main() -> io::Result<()> {
-    let stdin = io::stdin();
-    let mut stdout = io::stdout();
-    let mut stderr = io::stderr();
+    let mut stdin = io::stdin().lock();
+    let mut stdout = io::stdout().lock();
+    let mut stderr = io::stderr().lock();
 
     let executables = path_loader::load();
 
     loop {
-        if repl(&stdin, &mut stdout, &mut stderr, &executables)? {
+        if repl(&mut stdin, &mut stdout, &mut stderr, &executables)? {
             break;
         }
     }
