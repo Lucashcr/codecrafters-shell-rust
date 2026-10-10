@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::command_interpreter::Command;
+use crate::command::Command;
 
 pub fn make_echo(s: &str) -> Command {
     Command::Echo(String::from(s))

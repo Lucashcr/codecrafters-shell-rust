@@ -3,7 +3,7 @@ use std::io;
 use std::io::Write;
 use std::path::PathBuf;
 
-mod command_interpreter;
+mod command;
 mod path_loader;
 mod prompt_parser;
 
@@ -13,7 +13,7 @@ fn repl(
     stderr: &mut io::Stderr,
     executables: &HashMap<String, PathBuf>,
 ) -> io::Result<bool> {
-    let mut result = command_interpreter::InterpreterResult {
+    let mut result = command::InterpreterResult {
         return_code: 0,
         should_finish: false,
     };
@@ -37,7 +37,7 @@ fn repl(
             }
 
             let command = prompt_parser::parse(&prompt, executables);
-            result = command_interpreter::interpret(&command, stdout, stderr)?;
+            result = command.interp(stdout, stderr)?;
         }
         Err(error) => {
             writeln!(stderr, "{error}")?;

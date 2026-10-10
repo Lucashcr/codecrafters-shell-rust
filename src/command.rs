@@ -16,71 +16,73 @@ pub struct InterpreterResult {
     pub should_finish: bool,
 }
 
-pub fn interpret(
-    command: &Command,
-    stdout: &mut impl Write,
-    stderr: &mut impl Write,
-) -> std::io::Result<InterpreterResult> {
-    match command {
-        Command::Nothing => {
-            writeln!(stdout)?;
-            return Ok(InterpreterResult {
-                return_code: 0,
-                should_finish: false,
-            });
-        }
-        Command::Exit => {
-            writeln!(stdout)?;
-            return Ok(InterpreterResult {
-                return_code: 0,
-                should_finish: true,
-            });
-        }
-        Command::Echo(arg) => {
-            writeln!(stdout, "{arg}")?;
-        }
-        Command::Type(name, command) => match &**command {
-            Command::Unknown(_) => {
-                writeln!(stdout, "{name}: not found")?;
+impl Command {
+    pub fn interp(
+        &self,
+        stdout: &mut impl Write,
+        stderr: &mut impl Write,
+    ) -> std::io::Result<InterpreterResult> {
+        match self {
+            Command::Nothing => {
+                writeln!(stdout)?;
+                return Ok(InterpreterResult {
+                    return_code: 0,
+                    should_finish: false,
+                });
             }
-            Command::Executable(cmd, path, _) => {
-                writeln!(stdout, "{cmd} is {}", path.to_string_lossy())?;
+            Command::Exit => {
+                writeln!(stdout)?;
+                return Ok(InterpreterResult {
+                    return_code: 0,
+                    should_finish: true,
+                });
             }
-            _ => {
-                writeln!(stdout, "{name} is a shell builtin")?;
+            Command::Echo(arg) => {
+                writeln!(stdout, "{arg}")?;
             }
-        },
-        Command::Executable(name, _, args) => {
-            let status = std::process::Command::new(name).args(args).status();
-            match status {
-                Ok(status) => {
-                    return Ok(InterpreterResult {
-                        return_code: status.code().unwrap_or(1),
-                        should_finish: false,
-                    });
+            Command::Type(name, command) => match &**command {
+                Command::Unknown(_) => {
+                    writeln!(stdout, "{name}: not found")?;
                 }
-                Err(error) => {
-                    writeln!(stderr, "failed to execute {name}: {error}")?;
-                    return Ok(InterpreterResult {
-                        return_code: 1,
-                        should_finish: false,
-                    });
+                Command::Executable(cmd, path, _) => {
+                    writeln!(stdout, "{cmd} is {}", path.to_string_lossy())?;
                 }
-            };
+                _ => {
+                    writeln!(stdout, "{name} is a shell builtin")?;
+                }
+            },
+            Command::Executable(name, _, args) => {
+                let status = std::process::Command::new(name).args(args).status();
+                match status {
+                    Ok(status) => {
+                        return Ok(InterpreterResult {
+                            return_code: status.code().unwrap_or(1),
+                            should_finish: false,
+                        });
+                    }
+                    Err(error) => {
+                        writeln!(stderr, "failed to execute {name}: {error}")?;
+                        return Ok(InterpreterResult {
+                            return_code: 1,
+                            should_finish: false,
+                        });
+                    }
+                };
+            }
+            Command::Unknown(cmd) => {
+                writeln!(stdout, "{cmd}: command not found")?;
+                return Ok(InterpreterResult {
+                    return_code: 127,
+                    should_finish: false,
+                });
+            }
         }
-        Command::Unknown(cmd) => {
-            writeln!(stdout, "{cmd}: command not found")?;
-            return Ok(InterpreterResult {
-                return_code: 127,
-                should_finish: false,
-            });
-        }
-    }
 
-    Ok(InterpreterResult {
-        return_code: 0,
-        should_finish: false,
-    })
+        Ok(InterpreterResult {
+            return_code: 0,
+            should_finish: false,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -96,7 +98,7 @@ mod tests {
     fn run(command: &Command) -> (String, i32, bool) {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
-        let result = interpret(command, &mut stdout, &mut stderr);
+        let result = command.interp(&mut stdout, &mut stderr);
         let result_ref = result.as_ref();
         (
             String::from_utf8(stdout).unwrap(),
