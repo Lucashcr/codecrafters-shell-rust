@@ -13,24 +13,40 @@ fn read_entry(entry: PathBuf) -> HashMap<String, PathBuf> {
 
     let mut programs = HashMap::new();
 
-    for file_result in dir {
-        match file_result {
-            Ok(entry) => {
-                if let Ok(metadata) = std::fs::metadata(entry.path()) {
-                    let filename = entry.file_name();
-                    let Some(filename) = filename.to_str() else {
-                        continue;
-                    };
-                    if is_executable(&metadata) && !programs.contains_key(filename) {
-                        programs.insert(String::from(filename), entry.path());
-                    }
-                }
-            }
-            Err(_) => continue,
+    for entry_result in dir {
+        let Ok(entry) = entry_result else {
+            continue;
+        };
+        let Ok(metadata) = std::fs::metadata(entry.path()) else {
+            continue;
+        };
+        let filename = entry.file_name();
+        let Some(filename) = filename.to_str() else {
+            continue;
+        };
+        if is_executable(&metadata) && !programs.contains_key(filename) {
+            programs.insert(String::from(filename), entry.path());
         }
     }
 
     programs
+}
+
+pub fn load() -> HashMap<String, PathBuf> {
+    match std::env::var_os("PATH") {
+        Some(path_var) => {
+            let mut result = HashMap::new();
+
+            for path in std::env::split_paths(&path_var) {
+                for (filename, filepath) in read_entry(path) {
+                    result.entry(filename).or_insert(filepath);
+                }
+            }
+
+            result
+        }
+        None => HashMap::new(),
+    }
 }
 
 #[cfg(test)]
@@ -127,22 +143,5 @@ mod tests {
         let dir = TempDir::new("missing");
 
         assert!(read_entry(dir.path().join("does-not-exist")).is_empty());
-    }
-}
-
-pub fn load() -> HashMap<String, PathBuf> {
-    match std::env::var_os("PATH") {
-        Some(path_var) => {
-            let mut result = HashMap::new();
-
-            for path in std::env::split_paths(&path_var) {
-                for (filename, filepath) in read_entry(path) {
-                    result.entry(filename).or_insert(filepath);
-                }
-            }
-
-            result
-        }
-        None => HashMap::new(),
     }
 }
