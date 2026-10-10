@@ -59,7 +59,7 @@ pub fn interpret(
                     });
                 }
                 Err(error) => {
-                    write!(stderr, "failed to execute {name}: {error}")?;
+                    writeln!(stderr, "failed to execute {name}: {error}")?;
                     return Ok(InterpreterResult {
                         return_code: 1,
                         should_finish: false,
