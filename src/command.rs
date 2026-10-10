@@ -54,7 +54,7 @@ impl InterpResult {
             should_finish: true,
         }
     }
-    fn error(code: i32) -> Self {
+    fn with_code(code: i32) -> Self {
         Self {
             return_code: code,
             should_finish: false,
@@ -91,7 +91,7 @@ impl Command {
             },
             Command::UsageError(message) => {
                 writeln!(stderr, "{message}")?;
-                InterpResult::error(1)
+                InterpResult::with_code(1)
             }
             Command::Executable(name, path, args) => {
                 let status = std::process::Command::new(path)
@@ -99,16 +99,16 @@ impl Command {
                     .args(args)
                     .status();
                 match status {
-                    Ok(s) => InterpResult::error(s.code().unwrap_or(1)),
+                    Ok(s) => InterpResult::with_code(s.code().unwrap_or(1)),
                     Err(error) => {
                         writeln!(stderr, "failed to execute {name}: {error}")?;
-                        InterpResult::error(1)
+                        InterpResult::with_code(1)
                     }
                 }
             }
             Command::Unknown(cmd) => {
                 writeln!(stderr, "{cmd}: command not found")?;
-                InterpResult::error(127)
+                InterpResult::with_code(127)
             }
         };
 
@@ -244,7 +244,7 @@ mod tests {
             (
                 String::new(),
                 String::from("foo: command not found\n"),
-                InterpResult::error(127)
+                InterpResult::with_code(127)
             )
         );
     }
