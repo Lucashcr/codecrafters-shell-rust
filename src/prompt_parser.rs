@@ -175,6 +175,49 @@ mod tests {
         assert_eq!(parse("exits", &mock_executables()), make_unknown("exits"));
     }
 
+    fn executables_shadowing_builtins() -> HashMap<String, PathBuf> {
+        HashMap::from([
+            (String::from("echo"), PathBuf::from("/usr/bin/echo")),
+            (String::from("exit"), PathBuf::from("/usr/bin/exit")),
+            (String::from("type"), PathBuf::from("/usr/bin/type")),
+        ])
+    }
+
+    #[test]
+    fn type_of_executable_reports_its_path() {
+        assert_eq!(
+            parse("type grep", &mock_executables()),
+            Command::Type(
+                "grep".into(),
+                CommandType::Executable(PathBuf::from("/usr/bin/grep"))
+            )
+        );
+    }
+
+    #[test]
+    fn echo_builtin_wins_over_executable_with_same_name() {
+        assert_eq!(
+            parse("echo hi", &executables_shadowing_builtins()),
+            make_echo("hi")
+        );
+    }
+
+    #[test]
+    fn exit_builtin_wins_over_executable_with_same_name() {
+        assert_eq!(
+            parse("exit", &executables_shadowing_builtins()),
+            Command::Exit
+        );
+    }
+
+    #[test]
+    fn type_builtin_wins_over_executable_with_same_name() {
+        assert_eq!(
+            parse("type echo", &executables_shadowing_builtins()),
+            Command::Type("echo".into(), CommandType::Builtin)
+        );
+    }
+
     #[test]
     fn blank_input_does_not_panic() {
         for input in ["", "   ", "\t"] {

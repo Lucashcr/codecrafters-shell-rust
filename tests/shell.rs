@@ -8,7 +8,16 @@ const TIMEOUT: Duration = Duration::from_secs(3);
 /// Runs the shell feeding `input` to stdin. Returns the stdout captured and the
 /// exit status, or `None` for the status if the process had to be killed.
 fn run_shell(input: &str) -> (String, Option<ExitStatus>) {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_codecrafters-shell"))
+    run_shell_with_path(input, None)
+}
+
+/// Like `run_shell`, but overrides the `PATH` the shell indexes at startup.
+fn run_shell_with_path(input: &str, path: Option<&str>) -> (String, Option<ExitStatus>) {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_codecrafters-shell"));
+    if let Some(path) = path {
+        command.env("PATH", path);
+    }
+    let mut child = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -105,6 +114,13 @@ fn multiple_commands_run_in_order() {
 #[test]
 fn blank_lines_only_reprint_prompt() {
     assert_clean_run("\n   \nexit\n", "$ \n$ \n$ \n");
+}
+
+#[test]
+fn missing_path_directory_prints_nothing_extra() {
+    let (stdout, status) = run_shell_with_path("exit\n", Some("/nonexistent/dir"));
+    assert_eq!(stdout, "$ \n");
+    assert!(status.expect("shell timed out").success());
 }
 
 #[test]
