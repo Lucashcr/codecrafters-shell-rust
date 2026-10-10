@@ -29,6 +29,7 @@ pub enum Command {
     Echo(String),
     Type(String, CommandType),
     Exit,
+    UsageError(String),
     Nothing,
     Unknown(String),
     Executable(String, PathBuf, Vec<String>),
@@ -88,6 +89,10 @@ impl Command {
                     InterpResult::ok()
                 }
             },
+            Command::UsageError(message) => {
+                writeln!(stderr, "{message}")?;
+                InterpResult::error(1)
+            }
             Command::Executable(name, path, args) => {
                 let status = std::process::Command::new(path)
                     .arg0(name)

@@ -15,6 +15,10 @@ pub fn make_executable(name: &str, path: &Path, args: Vec<String>) -> Command {
     Command::Executable(name.to_string(), path.to_path_buf(), args)
 }
 
+pub fn make_usage_error(message: &str) -> Command {
+    Command::UsageError(message.to_string())
+}
+
 pub fn make_unknown(s: &str) -> Command {
     Command::Unknown(String::from(s))
 }
@@ -33,8 +37,8 @@ pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
         }
         "type" => match (args.next(), args.next()) {
             (Some(arg), None) => make_type(arg, executables),
-            (Some(_), Some(_)) => make_echo("too many arguments"),
-            _ => make_echo("type requires an argument"),
+            (Some(_), Some(_)) => make_usage_error("too many arguments"),
+            _ => make_usage_error("type requires an argument"),
         },
         _ => match executables.get(command) {
             Some(path) => {
@@ -117,7 +121,7 @@ mod tests {
     fn type_without_argument() {
         assert_eq!(
             parse("type", &mock_executables()),
-            make_echo("type requires an argument")
+            make_usage_error("type requires an argument")
         );
     }
 
@@ -125,7 +129,7 @@ mod tests {
     fn type_with_too_many_arguments() {
         assert_eq!(
             parse("type a b", &mock_executables()),
-            make_echo("too many arguments")
+            make_usage_error("too many arguments")
         );
     }
 

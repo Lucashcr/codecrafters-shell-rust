@@ -119,12 +119,12 @@ fn type_unknown() {
 
 #[test]
 fn type_without_argument() {
-    assert_clean_run("type\nexit\n", "$ type requires an argument\n$ ");
+    assert_clean_run_with_stderr("type\nexit\n", "$ $ ", "type requires an argument\n");
 }
 
 #[test]
 fn type_with_too_many_arguments() {
-    assert_clean_run("type a b\nexit\n", "$ too many arguments\n$ ");
+    assert_clean_run_with_stderr("type a b\nexit\n", "$ $ ", "too many arguments\n");
 }
 
 #[test]
