@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn exit_finishes() {
-        assert_eq!(step("exit\n"), (String::from("$ \n"), String::new(), true));
+        assert_eq!(step("exit\n"), (String::from("$ "), String::new(), true));
     }
 
     #[test]
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn session_stops_at_exit_and_ignores_the_rest() {
         let (stdout, stderr) = session("echo one\nexit\necho nope\n");
-        assert_eq!(stdout, "$ one\n$ \n");
+        assert_eq!(stdout, "$ one\n$ ");
         assert_eq!(stderr, "");
     }
 

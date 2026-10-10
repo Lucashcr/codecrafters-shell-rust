@@ -68,11 +68,9 @@ impl Command {
     ) -> std::io::Result<InterpResult> {
         let result = match self {
             Command::Nothing => {
-                writeln!(stdout)?;
                 InterpResult::ok()
             }
             Command::Exit => {
-                writeln!(stdout)?;
                 InterpResult::exit()
             }
             Command::Echo(arg) => {
@@ -134,7 +132,7 @@ mod tests {
     fn exit_stops_without_output() {
         assert_eq!(
             run(&Command::Exit),
-            (String::from("\n"), String::new(), InterpResult::exit())
+            (String::from(""), String::new(), InterpResult::exit())
         );
     }
 
