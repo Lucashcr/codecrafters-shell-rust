@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 
 #[derive(Debug, PartialEq)]
@@ -67,12 +68,8 @@ impl Command {
         stderr: &mut impl Write,
     ) -> std::io::Result<InterpResult> {
         let result = match self {
-            Command::Nothing => {
-                InterpResult::ok()
-            }
-            Command::Exit => {
-                InterpResult::exit()
-            }
+            Command::Nothing => InterpResult::ok(),
+            Command::Exit => InterpResult::exit(),
             Command::Echo(arg) => {
                 writeln!(stdout, "{arg}")?;
                 InterpResult::ok()
@@ -91,8 +88,12 @@ impl Command {
                     InterpResult::ok()
                 }
             },
-            Command::Executable(name, _, args) => {
-                match std::process::Command::new(name).args(args).status() {
+            Command::Executable(name, path, args) => {
+                let status = std::process::Command::new(path)
+                    .arg0(name)
+                    .args(args)
+                    .status();
+                match status {
                     Ok(s) => InterpResult::error(s.code().unwrap_or(1)),
                     Err(error) => {
                         writeln!(stderr, "failed to execute {name}: {error}")?;
