@@ -19,14 +19,7 @@ fn read_entry(entry: &str) -> HashMap<String, String> {
                 continue;
             };
 
-            if p.ends_with("/X11") {
-                continue;
-            }
-
-            if metadata.is_dir() {
-                programs.extend(read_entry(p));
-                continue;
-            } else if metadata.is_file() && metadata.permissions().mode() & 0o111 != 0 {
+            if metadata.is_file() && metadata.permissions().mode() & 0o111 != 0 {
                 let Ok(name) = file.file_name().into_string() else {
                     continue;
                 };
@@ -34,10 +27,7 @@ fn read_entry(entry: &str) -> HashMap<String, String> {
                 continue;
             } else if metadata.is_symlink() {
                 if let Ok(target_metadata) = std::fs::metadata(p) {
-                    if target_metadata.is_dir() {
-                        programs.extend(read_entry(p));
-                        continue;
-                    } else if target_metadata.is_file() && metadata.permissions().mode() & 0o111 != 0 {
+                    if target_metadata.is_file() && metadata.permissions().mode() & 0o111 != 0 {
                         let Ok(name) = file.file_name().into_string() else {
                             continue;
                         };
