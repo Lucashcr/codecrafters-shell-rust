@@ -1,4 +1,5 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use crate::command::Command;
 
@@ -11,7 +12,7 @@ pub fn make_type(s: &str, executables: &HashMap<String, PathBuf>) -> Command {
     Command::Type(String::from(s), command.resolve_type())
 }
 
-pub fn make_executable(name: &str, path: &PathBuf, args: Vec<String>) -> Command {
+pub fn make_executable(name: &str, path: &Path, args: Vec<String>) -> Command {
     Command::Executable(name.to_string(), path.to_path_buf(), args)
 }
 
@@ -48,7 +49,7 @@ pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use crate::command::CommandType;
 
     use super::*;
@@ -177,10 +178,7 @@ pub mod tests {
     #[test]
     fn blank_input_does_not_panic() {
         for input in ["", "   ", "\t"] {
-            assert!(
-                std::panic::catch_unwind(|| parse(input, &mock_executables())).is_ok(),
-                "parse({input:?}) panicked"
-            );
+            assert_eq!(parse(input, &mock_executables()), Command::Nothing)
         }
     }
 }

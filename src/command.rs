@@ -118,8 +118,8 @@ mod tests {
     fn run(command: &Command) -> (String, InterpResult) {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
-        let result = command.interp(&mut stdout, &mut stderr);
-        (String::from_utf8(stdout).unwrap(), result.unwrap())
+        let result = command.interp(&mut stdout, &mut stderr).unwrap();
+        (String::from_utf8(stdout).unwrap(), result)
     }
 
     #[test]

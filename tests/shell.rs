@@ -114,13 +114,11 @@ fn nothing_runs_after_exit() {
     assert!(status.expect("shell timed out").success());
 }
 
-// Known bug: EOF on stdin makes the shell loop forever.
 #[test]
 fn eof_after_commands_ends_shell() {
     assert_clean_run("echo hi\n", "$ hi\n$ \n");
 }
 
-// Known bug: EOF on stdin makes the shell loop forever.
 #[test]
 fn empty_stdin_ends_shell() {
     assert_clean_run("", "$ \n");

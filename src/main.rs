@@ -37,7 +37,7 @@ fn repl(
         }
         Err(error) => {
             writeln!(stderr, "{error}")?;
-            return Ok(false);
+            Ok(false)
         }
     }
 }
