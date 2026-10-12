@@ -11,7 +11,7 @@ pub enum CommandType {
     NotFound,
 }
 
-const BUILTINS: &[&str] = &["echo", "exit", "type"];
+const BUILTINS: &[&str] = &["echo", "exit", "type", "pwd"];
 
 impl CommandType {
     pub fn resolve(cmd: &str, executables: &Executables) -> Self {
@@ -34,6 +34,7 @@ pub enum Command {
     Nothing,
     Unknown(String),
     Executable(String, PathBuf, Vec<String>),
+    Pwd,
 }
 
 impl Command {
@@ -42,19 +43,19 @@ impl Command {
     }
 
     pub fn new_type(s: &str, executables: &Executables) -> Self {
-        Command::Type(s.into(), CommandType::resolve(s, executables))
+        Self::Type(s.into(), CommandType::resolve(s, executables))
     }
 
-    pub fn new_executable(name: &str, path: &Path, args: Vec<String>) -> Command {
-        Command::Executable(name.into(), path.into(), args)
+    pub fn new_executable(name: &str, path: &Path, args: Vec<String>) -> Self {
+        Self::Executable(name.into(), path.into(), args)
     }
 
     pub fn new_usage_error(message: &str) -> Command {
-        Command::UsageError(message.into())
+        Self::UsageError(message.into())
     }
 
     pub fn new_unknown(s: &str) -> Command {
-        Command::Unknown(s.into())
+        Self::Unknown(s.into())
     }
 }
 
@@ -98,6 +99,16 @@ impl Command {
                 writeln!(stdout, "{arg}")?;
                 InterpResult::ok()
             }
+            Self::Pwd => match std::env::current_dir() {
+                Ok(path) => {
+                    writeln!(stdout, "{}", path.display())?;
+                    InterpResult::ok()
+                }
+                Err(error) => {
+                    writeln!(stderr, "{error}")?;
+                    InterpResult::with_code(1)
+                }
+            },
             Self::Type(name, command) => match command {
                 CommandType::Builtin => {
                     writeln!(stdout, "{name} is a shell builtin")?;
@@ -216,6 +227,28 @@ mod tests {
                 String::new(),
                 InterpResult::ok()
             )
+        );
+    }
+
+    #[test]
+    fn type_pwd_is_builtin() {
+        let cmd = Command::new_type("pwd", &mock_executables());
+        assert_eq!(
+            run(&cmd),
+            (
+                String::from("pwd is a shell builtin\n"),
+                String::new(),
+                InterpResult::ok()
+            )
+        );
+    }
+
+    #[test]
+    fn pwd_prints_current_dir() {
+        let expected = format!("{}\n", std::env::current_dir().unwrap().display());
+        assert_eq!(
+            run(&Command::Pwd),
+            (expected, String::new(), InterpResult::ok())
         );
     }
 

@@ -13,6 +13,7 @@ pub fn parse(prompt: &str, executables: &Executables) -> Command {
             let args: Vec<&str> = args.collect();
             Command::new_echo(&args.join(" "))
         }
+        "pwd" => Command::Pwd,
         "type" => match (args.next(), args.next()) {
             (Some(arg), None) => Command::new_type(arg, executables),
             (Some(_), Some(_)) => Command::new_usage_error("too many arguments"),
@@ -93,6 +94,20 @@ mod tests {
             parse("type type", &mock_executables()),
             Command::Type("type".into(), CommandType::Builtin)
         );
+        assert_eq!(
+            parse("type pwd", &mock_executables()),
+            Command::Type("pwd".into(), CommandType::Builtin)
+        );
+    }
+
+    #[test]
+    fn parses_pwd() {
+        assert_eq!(parse("pwd", &mock_executables()), Command::Pwd);
+    }
+
+    #[test]
+    fn pwd_ignores_args() {
+        assert_eq!(parse("pwd foo bar", &mock_executables()), Command::Pwd);
     }
 
     #[test]
@@ -177,7 +192,16 @@ mod tests {
             (String::from("echo"), PathBuf::from("/usr/bin/echo")),
             (String::from("exit"), PathBuf::from("/usr/bin/exit")),
             (String::from("type"), PathBuf::from("/usr/bin/type")),
+            (String::from("pwd"), PathBuf::from("/usr/bin/pwd")),
         ]))
+    }
+
+    #[test]
+    fn pwd_builtin_wins_over_executable_with_same_name() {
+        assert_eq!(
+            parse("pwd", &executables_shadowing_builtins()),
+            Command::Pwd
+        );
     }
 
     #[test]

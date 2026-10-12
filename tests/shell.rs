@@ -1,4 +1,5 @@
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -13,7 +14,7 @@ fn run_shell(input: &str) -> (String, Option<ExitStatus>) {
 
 /// Like `run_shell`, but overrides the `PATH` the shell indexes at startup.
 fn run_shell_with_path(input: &str, path: Option<&str>) -> (String, Option<ExitStatus>) {
-    let (stdout, _stderr, status) = run_shell_capturing_all(input, path);
+    let (stdout, _stderr, status) = run_shell_capturing_all(input, path, None);
     (stdout, status)
 }
 
@@ -33,14 +34,19 @@ fn capture(mut source: impl Read + Send + 'static) -> thread::JoinHandle<Vec<u8>
     })
 }
 
-/// Like `run_shell_with_path`, but also returns the captured stderr.
+/// Like `run_shell_with_path`, but also returns the captured stderr and
+/// optionally sets the shell's working directory.
 fn run_shell_capturing_all(
     input: &str,
     path: Option<&str>,
+    cwd: Option<&Path>,
 ) -> (String, String, Option<ExitStatus>) {
     let mut command = Command::new(env!("CARGO_BIN_EXE_codecrafters-shell"));
     if let Some(path) = path {
         command.env("PATH", path);
+    }
+    if let Some(cwd) = cwd {
+        command.current_dir(cwd);
     }
     let mut child = command
         .stdin(Stdio::piped())
@@ -84,7 +90,7 @@ fn assert_clean_run(input: &str, expected_stdout: &str) {
 }
 
 fn assert_clean_run_with_stderr(input: &str, expected_stdout: &str, expected_stderr: &str) {
-    let (stdout, stderr, status) = run_shell_capturing_all(input, None);
+    let (stdout, stderr, status) = run_shell_capturing_all(input, None, None);
     assert_eq!(stdout, expected_stdout);
     assert_eq!(stderr, expected_stderr);
     assert!(status.expect("shell timed out").success());
@@ -110,6 +116,16 @@ fn type_builtins() {
     assert_clean_run("type echo\nexit\n", "$ echo is a shell builtin\n$ ");
     assert_clean_run("type exit\nexit\n", "$ exit is a shell builtin\n$ ");
     assert_clean_run("type type\nexit\n", "$ type is a shell builtin\n$ ");
+    assert_clean_run("type pwd\nexit\n", "$ pwd is a shell builtin\n$ ");
+}
+
+#[test]
+fn pwd_prints_working_directory() {
+    let dir = std::env::temp_dir().canonicalize().unwrap();
+    let (stdout, stderr, status) = run_shell_capturing_all("pwd\nexit\n", None, Some(&dir));
+    assert_eq!(stdout, format!("$ {}\n$ ", dir.display()));
+    assert_eq!(stderr, "");
+    assert!(status.expect("shell timed out").success());
 }
 
 #[test]
