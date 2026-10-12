@@ -19,10 +19,10 @@ pub fn parse(prompt: &str, executables: &Executables) -> Command {
         "cd" => match args.next() {
             Some(arg) => {
                 if arg == "~" {
-                    let Some(home_dir) = std::env::var_os("HOME") else {
-                        return Command::Error("var HOME nor defined".into());
-                    };
-                    return Command::Cd(home_dir.into());
+                    return match std::env::var_os("HOME") {
+                        Some(home_dir) => Command::Cd(home_dir.into()),
+                        None => Command::Error("var HOME nor defined".into())
+                    }
                 }
                 let path = PathBuf::from(arg);
                 if !path.is_dir() {
