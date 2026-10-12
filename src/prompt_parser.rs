@@ -18,18 +18,24 @@ pub fn parse(prompt: &str, executables: &Executables) -> Command {
         "pwd" => Command::Pwd,
         "cd" => match args.next() {
             Some(arg) => {
+                if arg == "~" {
+                    let Some(home_dir) = std::env::var_os("HOME") else {
+                        return Command::Error("var HOME nor defined".into());
+                    };
+                    return Command::Cd(home_dir.into());
+                }
                 let path = PathBuf::from(arg);
                 if !path.is_dir() {
-                    return Command::UsageError(format!("cd: {arg}: No such file or directory"));
+                    return Command::Error(format!("cd: {arg}: No such file or directory"));
                 }
                 Command::Cd(path)
             }
-            None => Command::new_usage_error("cd requires an argument"),
+            None => Command::new_error("cd requires an argument"),
         },
         "type" => match (args.next(), args.next()) {
             (Some(arg), None) => Command::new_type(arg, executables),
-            (Some(_), Some(_)) => Command::new_usage_error("too many arguments"),
-            _ => Command::new_usage_error("type requires an argument"),
+            (Some(_), Some(_)) => Command::new_error("too many arguments"),
+            _ => Command::new_error("type requires an argument"),
         },
         _ => match executables.lookup(command) {
             Some(path) => {
@@ -134,7 +140,7 @@ mod tests {
     fn type_without_argument() {
         assert_eq!(
             parse("type", &mock_executables()),
-            Command::new_usage_error("type requires an argument")
+            Command::new_error("type requires an argument")
         );
     }
 
@@ -142,7 +148,7 @@ mod tests {
     fn type_with_too_many_arguments() {
         assert_eq!(
             parse("type a b", &mock_executables()),
-            Command::new_usage_error("too many arguments")
+            Command::new_error("too many arguments")
         );
     }
 

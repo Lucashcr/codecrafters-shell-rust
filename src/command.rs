@@ -30,7 +30,7 @@ pub enum Command {
     Echo(String),
     Type(String, CommandType),
     Exit,
-    UsageError(String),
+    Error(String),
     Nothing,
     Unknown(String),
     Executable(String, PathBuf, Vec<String>),
@@ -51,8 +51,8 @@ impl Command {
         Self::Executable(name.into(), path.into(), args)
     }
 
-    pub fn new_usage_error(message: &str) -> Command {
-        Self::UsageError(message.into())
+    pub fn new_error(message: &str) -> Command {
+        Self::Error(message.into())
     }
 
     pub fn new_unknown(s: &str) -> Command {
@@ -131,7 +131,7 @@ impl Command {
                     InterpResult::ok()
                 }
             },
-            Self::UsageError(message) => {
+            Self::Error(message) => {
                 writeln!(stderr, "{message}")?;
                 InterpResult::with_code(1)
             }
