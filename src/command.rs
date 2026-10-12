@@ -11,7 +11,7 @@ pub enum CommandType {
     NotFound,
 }
 
-const BUILTINS: &[&str] = &["echo", "exit", "type", "pwd"];
+const BUILTINS: &[&str] = &["echo", "exit", "type", "pwd", "cd"];
 
 impl CommandType {
     pub fn resolve(cmd: &str, executables: &Executables) -> Self {
@@ -35,6 +35,7 @@ pub enum Command {
     Unknown(String),
     Executable(String, PathBuf, Vec<String>),
     Pwd,
+    Cd(PathBuf),
 }
 
 impl Command {
@@ -104,6 +105,13 @@ impl Command {
                     writeln!(stdout, "{}", path.display())?;
                     InterpResult::ok()
                 }
+                Err(error) => {
+                    writeln!(stderr, "{error}")?;
+                    InterpResult::with_code(1)
+                }
+            },
+            Self::Cd(path) => match std::env::set_current_dir(path) {
+                Ok(_) => InterpResult::ok(),
                 Err(error) => {
                     writeln!(stderr, "{error}")?;
                     InterpResult::with_code(1)

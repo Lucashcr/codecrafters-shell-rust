@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::command::Command;
 use crate::path_loader::Executables;
 
@@ -14,6 +16,16 @@ pub fn parse(prompt: &str, executables: &Executables) -> Command {
             Command::new_echo(&args.join(" "))
         }
         "pwd" => Command::Pwd,
+        "cd" => match args.next() {
+            Some(arg) => {
+                let path = PathBuf::from(arg);
+                if !path.is_dir() {
+                    return Command::UsageError(format!("{arg} is not a directory"));
+                }
+                Command::Cd(path)
+            }
+            None => Command::new_usage_error("cd requires an argument"),
+        },
         "type" => match (args.next(), args.next()) {
             (Some(arg), None) => Command::new_type(arg, executables),
             (Some(_), Some(_)) => Command::new_usage_error("too many arguments"),
