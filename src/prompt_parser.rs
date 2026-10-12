@@ -20,7 +20,7 @@ pub fn parse(prompt: &str, executables: &Executables) -> Command {
             Some(arg) => {
                 let path = PathBuf::from(arg);
                 if !path.is_dir() {
-                    return Command::UsageError(format!("{arg} is not a directory"));
+                    return Command::UsageError(format!("cd: {arg}: No such file or directory"));
                 }
                 Command::Cd(path)
             }
