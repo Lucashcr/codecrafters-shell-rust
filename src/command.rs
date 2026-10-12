@@ -1,7 +1,8 @@
-use std::collections::HashMap;
 use std::io::Write;
 use std::os::unix::process::CommandExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+use crate::path_loader::Executables;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CommandType {
@@ -13,12 +14,12 @@ pub enum CommandType {
 const BUILTINS: &[&str] = &["echo", "exit", "type"];
 
 impl CommandType {
-    pub fn resolve(cmd: &str, executables: &HashMap<String, PathBuf>) -> Self {
+    pub fn resolve(cmd: &str, executables: &Executables) -> Self {
         if BUILTINS.contains(&cmd) {
             return Self::Builtin;
         }
-        if let Some(path) = executables.get(cmd) {
-            return Self::Executable(path.clone());
+        if let Some(path) = executables.lookup(cmd) {
+            return Self::Executable(path.into());
         }
         Self::NotFound
     }
@@ -33,6 +34,28 @@ pub enum Command {
     Nothing,
     Unknown(String),
     Executable(String, PathBuf, Vec<String>),
+}
+
+impl Command {
+    pub fn new_echo(s: &str) -> Self {
+        Self::Echo(s.into())
+    }
+
+    pub fn new_type(s: &str, executables: &Executables) -> Self {
+        Command::Type(s.into(), CommandType::resolve(s, executables))
+    }
+
+    pub fn new_executable(name: &str, path: &Path, args: Vec<String>) -> Command {
+        Command::Executable(name.into(), path.into(), args)
+    }
+
+    pub fn new_usage_error(message: &str) -> Command {
+        Command::UsageError(message.into())
+    }
+
+    pub fn new_unknown(s: &str) -> Command {
+        Command::Unknown(s.into())
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -119,8 +142,7 @@ impl Command {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prompt_parser::{make_echo, make_type, make_unknown};
-    use crate::tests_support::mock_executables;
+    use crate::test_support::mock_executables;
 
     /// Returns `(stdout, stderr, result)` of interpreting `command`.
     fn run(command: &Command) -> (String, String, InterpResult) {
@@ -145,7 +167,7 @@ mod tests {
     #[test]
     fn echo_prints_argument() {
         assert_eq!(
-            run(&make_echo("hi")),
+            run(&Command::new_echo("hi")),
             (String::from("hi\n"), String::new(), InterpResult::ok())
         );
     }
@@ -153,14 +175,14 @@ mod tests {
     #[test]
     fn echo_empty_prints_newline() {
         assert_eq!(
-            run(&make_echo("")),
+            run(&Command::new_echo("")),
             (String::from("\n"), String::new(), InterpResult::ok())
         );
     }
 
     #[test]
     fn type_echo_is_builtin() {
-        let cmd = make_type("echo", &mock_executables());
+        let cmd = Command::new_type("echo", &mock_executables());
         assert_eq!(
             run(&cmd),
             (
@@ -173,7 +195,7 @@ mod tests {
 
     #[test]
     fn type_exit_is_builtin() {
-        let cmd = make_type("exit", &mock_executables());
+        let cmd = Command::new_type("exit", &mock_executables());
         assert_eq!(
             run(&cmd),
             (
@@ -186,7 +208,7 @@ mod tests {
 
     #[test]
     fn type_type_is_builtin() {
-        let cmd = make_type("type", &mock_executables());
+        let cmd = Command::new_type("type", &mock_executables());
         assert_eq!(
             run(&cmd),
             (
@@ -199,7 +221,7 @@ mod tests {
 
     #[test]
     fn type_grep_is_executable_file() {
-        let cmd = make_type("grep", &mock_executables());
+        let cmd = Command::new_type("grep", &mock_executables());
         assert_eq!(
             run(&cmd),
             (
@@ -212,7 +234,7 @@ mod tests {
 
     #[test]
     fn type_ls_is_not_executable_file() {
-        let cmd = make_type("ls", &mock_executables());
+        let cmd = Command::new_type("ls", &mock_executables());
         assert_eq!(
             run(&cmd),
             (
@@ -225,7 +247,7 @@ mod tests {
 
     #[test]
     fn type_unknown_is_not_found() {
-        let cmd = make_type("foo", &mock_executables());
+        let cmd = Command::new_type("foo", &mock_executables());
         assert_eq!(
             run(&cmd),
             (
@@ -238,7 +260,7 @@ mod tests {
 
     #[test]
     fn unknown_command_not_found() {
-        let cmd = make_unknown("foo");
+        let cmd = Command::new_unknown("foo");
         assert_eq!(
             run(&cmd),
             (

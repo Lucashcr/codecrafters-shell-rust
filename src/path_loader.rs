@@ -1,17 +1,38 @@
 use std::collections::HashMap;
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+ #[derive(Default, PartialEq, Eq)]
+pub struct Executables(HashMap<String, PathBuf>);
+
+impl Executables {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn from(value: HashMap<String, PathBuf>) -> Self {
+        Self(value)
+    }
+    pub fn lookup(&self, name: &str) -> Option<&Path>{
+        self.0.get(name).map(PathBuf::as_path)
+    }
+    pub fn contains(&self, name: &str) -> bool {
+        self.0.contains_key(name)
+    }
+    pub fn insert_if_absent(&mut self, name: String, path: PathBuf) {
+        self.0.entry(name).or_insert(path);
+    }
+}
 
 fn is_executable(metadata: &std::fs::Metadata) -> bool {
     metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
 }
 
 fn read_entry(entry: PathBuf) -> HashMap<String, PathBuf> {
-    let Ok(dir) = std::fs::read_dir(entry) else {
-        return HashMap::new();
-    };
-
     let mut programs = HashMap::new();
+    
+    let Ok(dir) = std::fs::read_dir(entry) else {
+        return programs;
+    };
 
     for entry_result in dir {
         let Ok(entry) = entry_result else {
@@ -31,16 +52,16 @@ fn read_entry(entry: PathBuf) -> HashMap<String, PathBuf> {
     programs
 }
 
-pub fn load() -> HashMap<String, PathBuf> {
+pub fn load() -> Executables {
+    let mut result = Executables::new();
+    
     let Some(path_var) = std::env::var_os("PATH") else {
-        return HashMap::new();
+        return result;
     };
-
-    let mut result = HashMap::new();
 
     for path in std::env::split_paths(&path_var) {
         for (filename, filepath) in read_entry(path) {
-            result.entry(filename).or_insert(filepath);
+            result.insert_if_absent(filename, filepath);
         }
     }
 

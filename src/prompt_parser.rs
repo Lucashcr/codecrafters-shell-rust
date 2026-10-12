@@ -1,29 +1,7 @@
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use crate::command::Command;
+use crate::path_loader::Executables;
 
-use crate::command::{Command, CommandType};
-
-pub fn make_echo(s: &str) -> Command {
-    Command::Echo(String::from(s))
-}
-
-pub fn make_type(s: &str, executables: &HashMap<String, PathBuf>) -> Command {
-    Command::Type(String::from(s), CommandType::resolve(s, executables))
-}
-
-pub fn make_executable(name: &str, path: &Path, args: Vec<String>) -> Command {
-    Command::Executable(name.to_string(), path.to_path_buf(), args)
-}
-
-pub fn make_usage_error(message: &str) -> Command {
-    Command::UsageError(message.to_string())
-}
-
-pub fn make_unknown(s: &str) -> Command {
-    Command::Unknown(String::from(s))
-}
-
-pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
+pub fn parse(prompt: &str, executables: &Executables) -> Command {
     let mut args = prompt.split_whitespace();
     let Some(command) = args.next() else {
         return Command::Nothing;
@@ -33,29 +11,31 @@ pub fn parse(prompt: &str, executables: &HashMap<String, PathBuf>) -> Command {
         "exit" => Command::Exit,
         "echo" => {
             let args: Vec<&str> = args.collect();
-            make_echo(&args.join(" "))
+            Command::new_echo(&args.join(" "))
         }
         "type" => match (args.next(), args.next()) {
-            (Some(arg), None) => make_type(arg, executables),
-            (Some(_), Some(_)) => make_usage_error("too many arguments"),
-            _ => make_usage_error("type requires an argument"),
+            (Some(arg), None) => Command::new_type(arg, executables),
+            (Some(_), Some(_)) => Command::new_usage_error("too many arguments"),
+            _ => Command::new_usage_error("type requires an argument"),
         },
-        _ => match executables.get(command) {
+        _ => match executables.lookup(command) {
             Some(path) => {
                 let args: Vec<String> = args.map(String::from).collect();
-                make_executable(command, path, args)
+                Command::new_executable(command, path, args)
             }
-            None => make_unknown(command),
+            None => Command::new_unknown(command),
         },
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::command::CommandType;
-    use crate::tests_support::mock_executables;
+    use std::collections::HashMap;
+    use std::path::PathBuf;
 
     use super::*;
+    use crate::command::CommandType;
+    use crate::test_support::mock_executables;
 
     #[test]
     fn parses_exit() {
@@ -64,19 +44,22 @@ mod tests {
 
     #[test]
     fn parses_echo_without_args() {
-        assert_eq!(parse("echo", &mock_executables()), make_echo(""));
+        assert_eq!(parse("echo", &mock_executables()), Command::new_echo(""));
     }
 
     #[test]
     fn parses_echo_single_arg() {
-        assert_eq!(parse("echo hello", &mock_executables()), make_echo("hello"));
+        assert_eq!(
+            parse("echo hello", &mock_executables()),
+            Command::new_echo("hello")
+        );
     }
 
     #[test]
     fn parses_echo_multiple_args() {
         assert_eq!(
             parse("echo hello world", &mock_executables()),
-            make_echo("hello world")
+            Command::new_echo("hello world")
         );
     }
 
@@ -84,13 +67,16 @@ mod tests {
     fn echo_normalizes_whitespace() {
         assert_eq!(
             parse("echo a    b\tc", &mock_executables()),
-            make_echo("a b c")
+            Command::new_echo("a b c")
         );
     }
 
     #[test]
     fn echo_with_leading_whitespace() {
-        assert_eq!(parse("   echo hi", &mock_executables()), make_echo("hi"));
+        assert_eq!(
+            parse("   echo hi", &mock_executables()),
+            Command::new_echo("hi")
+        );
     }
 
     #[test]
@@ -121,7 +107,7 @@ mod tests {
     fn type_without_argument() {
         assert_eq!(
             parse("type", &mock_executables()),
-            make_usage_error("type requires an argument")
+            Command::new_usage_error("type requires an argument")
         );
     }
 
@@ -129,7 +115,7 @@ mod tests {
     fn type_with_too_many_arguments() {
         assert_eq!(
             parse("type a b", &mock_executables()),
-            make_usage_error("too many arguments")
+            Command::new_usage_error("too many arguments")
         );
     }
 
@@ -137,46 +123,61 @@ mod tests {
     fn grep_is_executable_file() {
         assert_eq!(
             parse("grep", &mock_executables()),
-            make_executable("grep", &PathBuf::from("/usr/bin/grep"), vec![]),
+            Command::new_executable("grep", &PathBuf::from("/usr/bin/grep"), vec![]),
         );
     }
 
     #[test]
     fn ls_is_not_executable_file() {
-        assert_eq!(parse("ls", &mock_executables()), make_unknown("ls"),);
+        assert_eq!(parse("ls", &mock_executables()), Command::new_unknown("ls"));
     }
 
     #[test]
     fn parses_unknown_command() {
-        assert_eq!(parse("foo", &mock_executables()), make_unknown("foo"));
+        assert_eq!(
+            parse("foo", &mock_executables()),
+            Command::new_unknown("foo")
+        );
     }
 
     #[test]
     fn unknown_command_ignores_args() {
         assert_eq!(
             parse("foo bar baz", &mock_executables()),
-            make_unknown("foo")
+            Command::new_unknown("foo")
         );
     }
 
     #[test]
     fn commands_are_case_sensitive() {
-        assert_eq!(parse("ECHO hi", &mock_executables()), make_unknown("ECHO"));
-        assert_eq!(parse("Exit", &mock_executables()), make_unknown("Exit"));
+        assert_eq!(
+            parse("ECHO hi", &mock_executables()),
+            Command::new_unknown("ECHO")
+        );
+        assert_eq!(
+            parse("Exit", &mock_executables()),
+            Command::new_unknown("Exit")
+        );
     }
 
     #[test]
     fn similar_names_are_not_builtins() {
-        assert_eq!(parse("echoo", &mock_executables()), make_unknown("echoo"));
-        assert_eq!(parse("exits", &mock_executables()), make_unknown("exits"));
+        assert_eq!(
+            parse("echoo", &mock_executables()),
+            Command::new_unknown("echoo")
+        );
+        assert_eq!(
+            parse("exits", &mock_executables()),
+            Command::new_unknown("exits")
+        );
     }
 
-    fn executables_shadowing_builtins() -> HashMap<String, PathBuf> {
-        HashMap::from([
+    fn executables_shadowing_builtins() -> Executables {
+        Executables::from(HashMap::from([
             (String::from("echo"), PathBuf::from("/usr/bin/echo")),
             (String::from("exit"), PathBuf::from("/usr/bin/exit")),
             (String::from("type"), PathBuf::from("/usr/bin/type")),
-        ])
+        ]))
     }
 
     #[test]
@@ -194,7 +195,7 @@ mod tests {
     fn echo_builtin_wins_over_executable_with_same_name() {
         assert_eq!(
             parse("echo hi", &executables_shadowing_builtins()),
-            make_echo("hi")
+            Command::new_echo("hi")
         );
     }
 
